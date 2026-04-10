@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Los Turco 2.0 – Tesoros del Oriente al por Mayor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/custom.css"/>
+</head>
+<body>
+  <!-- NAVBAR PRINCIPAL -->
+  <nav class="bg-sky-400 text-white text-center py-2 text-xs md:text-sm font-semibold border-b border-sky-500 shadow-md">
+    🚚 DESPACHO DISPONIBLE SOLO A REGIÓN METROPOLITANA 🚚
+  </nav>
+  <nav class="w-full bg-dark-royal/92 backdrop-blur-lg border-b border-gold-lux/20 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <div class="flex items-center gap-4">
+         <div class="logo-container">
+            <a href="index.html"><img style="width: 50px; height: auto;" src="asset/lodolosturcos2.0.png" alt="Los Turcos 2.0 - Logo" class="logo-img"></a>
+        </div>
+      </div>
+      <div class="flex-1 flex justify-center">
+        <form onsubmit="event.preventDefault(); buscarProductos();" class="w-full max-w-md flex">
+          <input id="buscador" type="text" placeholder="Buscar productos..." class="w-full px-6 py-2 rounded-l-lg border border-gold-lux focus:outline-none focus:ring-2 focus:ring-turquoise-jewel text-lg" style="min-width:500px; max-width:900px;" />
+          <button type="submit" class="px-6 py-2 bg-gold-lux text-dark-royal font-bold rounded-r-lg hover:bg-yellow-400 transition text-lg">Buscar</button>
+        </form>
+      </div>
+      <div class="flex items-center gap-6">
+        <button onclick="toggleCart()" class="text-gold-lux text-2xl relative hover:text-turquoise-jewel transition-colors">
+          <i class="fa-solid fa-bag-shopping"></i>
+          <span id="cart-count" class="absolute -top-3 -right-3 bg-gold-lux text-dark-royal text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-sm">0</span>
+        </button>
+        <button class="text-gold-lux text-2xl hover:text-turquoise-jewel transition-colors"><i class="fa-solid fa-user"></i></button>
+      </div>
+    </div>
+  </nav>
+  <nav class="w-full bg-[#2d3486] py-3 shadow">
+    <div class="max-w-7xl mx-auto flex items-center justify-center px-6">
+      <ul class="flex-1 flex flex-wrap justify-center gap-8 text-white font-medium text-base">
+        <li><a href="html/alimentos.html" class="hover:underline">Alimentos</a></li>
+        <li><a href="html/aseo.html" class="hover:underline">Aseo</a></li>
+        <li><a href="html/textiles.html" class="hover:underline">Textiles</a></li>
+        <li><a href="html/cuidado-capilar.html" class="hover:underline">Cuidado Capilar</a></li>
+        <li><a href="html/cuidado-adulto.html" class="hover:underline">Cuidado Adulto</a></li>
+        <li><a href="index.html" class="hover:underline">Todos</a></li>
+      </ul>
+    </div>
+  </nav>
+  <header id="inicio" class="royal-bg min-h-[40vh] flex items-center relative pt-20 pb-10">
+    <div class="relative max-w-6xl mx-auto px-6 text-center text-white">
+      <h1 class="text-4xl md:text-6xl ornate-serif font-bold leading-tight mb-5 drop-shadow-md">Bienvenido a Los Turco 2.0</h1>
+      <p class="text-base md:text-lg text-gray-100 mt-4 max-w-3xl mx-auto">Tienda mayorista de productos turcos auténticos. Explora nuestras categorías y encuentra los mejores productos importados directamente desde Turquía.</p>
+    </div>
+  </header>
+  <section id="productos" class="py-16">
+    <div class="max-w-7xl mx-auto px-6">
+      <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+    </div>
+  </section>
+  <footer class="bg-white text-dark-royal py-12">
+    <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-10">
+      <div>
+        <div class="flex items-center gap-3 mb-4">
+          <img style="width: 40px; height: auto;" src="asset/lodolosturcos2.0.png" alt="Los Turcos 2.0 - Logo" class="logo-img">
+          <h3 class="ornate-serif text-xl text-gold-lux">Los Turco 2.0</h3>
+        </div>
+        <p class="text-dark-royal/70 text-sm">Importador directo de productos turcos auténticos para mayoristas en Chile.</p>
+      </div>
+      <!-- ...otros bloques de footer... -->
+    </div>
+  </footer>
+  <script src="js/main.js"></script>
+</body>
+</html>
