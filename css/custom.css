@@ -1,0 +1,85 @@
+/* Estilos personalizados extraídos de inicio3.html */
+
+/* Tamaño más grande para el logo */
+.logo-img {
+  width: 130px !important; ;
+  height: auto !important;
+  max-width: unset !important;
+}
+:root {
+  --gold-deep:    #b8860b;
+  --turquoise-jewel: #00a896;
+  --indigo-night: #0f1c3f;
+  --pomegranate:  #9b1d64;
+  --sand-lux:     #f8f1e9;
+  --cream-opal:   #fffaf0;
+  --dark-royal:   #393939;
+}
+body {
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, var(--sand-lux) 0%, #f0e0c8 100%);
+  color: var(--dark-royal);
+}
+.ornate-serif {
+  font-family: 'Cinzel Decorative', serif;
+  font-weight: 700;
+  text-shadow: 0 2px 6px rgba(212,175,55,0.25);
+}
+.playfair-title {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+}
+.royal-bg {
+  background: url('logolosturcos.png') center center/cover no-repeat fixed;
+  font-family: 'Lato', sans-serif;
+  color: var(--texto-oscuro);
+  margin: 0;
+  padding: 0;
+  line-height: 1.6;
+}
+.lux-frame {
+  border: 2px solid transparent;
+  border-image: linear-gradient(45deg, var(--gold-lux), var(--turquoise-jewel)) 1;
+  border-radius: 1.25rem;
+  box-shadow: 0 6px 20px rgba(212,175,55,0.15);
+  background: rgba(255, 204, 1, 0.96);
+  padding: 1.5rem;
+}
+.product-card {
+  background: white;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  box-shadow: 0 8px 25px rgba(10,15,30,0.1);
+  transition: all 0.35s ease;
+  border: 1px solid rgba(212,175,55,0.18);
+}
+.product-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 16px 40px rgba(0,168,150,0.18);
+}
+.btn-lux {
+  background: linear-gradient(135deg, var(--gold-lux), #2f2f2e);
+  color: var(--dark-royal);
+  transition: all 0.3s ease;
+}
+.btn-lux:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(144, 144, 144, 0.3);
+}
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90px;
+  height: 3px;
+  background: linear-gradient(to right, var(--gold-lux), var(--turquoise-jewel));
+  border-radius: 999px;
+}
+.ofertas-title {
+  color: #7c2d12;
+}
+.ofertas-title::after {
+  background: linear-gradient(to right, #7c2d12, #9a3412);
+}
