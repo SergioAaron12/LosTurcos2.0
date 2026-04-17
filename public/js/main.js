@@ -1,3 +1,149 @@
+const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyBIN5wILjhmFhHFxBwuJuKPsZyUNziPDFQ',
+  authDomain: 'losturcos2.firebaseapp.com',
+  projectId: 'losturcos2',
+  storageBucket: 'losturcos2.firebasestorage.app',
+  messagingSenderId: '353259282248',
+  appId: '1:353259282248:web:212a5dbe7ee28ed5cedd7d'
+};
+
+const FIRESTORE_PRODUCTS_COLLECTION = 'products';
+let firebaseAppReadyPromise = null;
+let remoteProductsHydrationPromise = null;
+
+function loadFirebaseScript(src) {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) {
+      if (existing.dataset.loaded === 'true') {
+        resolve();
+        return;
+      }
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => reject(new Error(`No se pudo cargar ${src}`)), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.addEventListener('load', () => {
+      script.dataset.loaded = 'true';
+      resolve();
+    }, { once: true });
+    script.addEventListener('error', () => reject(new Error(`No se pudo cargar ${src}`)), { once: true });
+    document.head.appendChild(script);
+  });
+}
+
+function initFirebaseApp() {
+  if (firebaseAppReadyPromise) return firebaseAppReadyPromise;
+
+  firebaseAppReadyPromise = Promise.all([
+    loadFirebaseScript('https://www.gstatic.com/firebasejs/12.12.0/firebase-app-compat.js'),
+    loadFirebaseScript('https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore-compat.js')
+  ]).then(() => {
+    if (!window.firebase) {
+      throw new Error('Firebase no quedó disponible en ventana global.');
+    }
+
+    if (!window.firebase.apps.length) {
+      window.firebase.initializeApp(FIREBASE_CONFIG);
+    }
+
+    return window.firebase.firestore();
+  });
+
+  return firebaseAppReadyPromise;
+}
+
+function normalizeProduct(product) {
+  return {
+    id: Number(product.id),
+    name: product.name || '',
+    price: Number(product.price) || 0,
+    stock: Number(product.stock) || 0,
+    category: product.category || '',
+    discount: Number(product.discount) || 0,
+    img: product.img || '',
+    details: product.details || '',
+    showcase: product.showcase || 'index'
+  };
+}
+
+async function fetchProductsFromFirestore() {
+  const db = await initFirebaseApp();
+  const snapshot = await db.collection(FIRESTORE_PRODUCTS_COLLECTION).get();
+  return snapshot.docs
+    .map(doc => normalizeProduct(doc.data()))
+    .sort((left, right) => left.id - right.id);
+}
+
+async function persistProductsToFirestore(productList) {
+  const db = await initFirebaseApp();
+  const batch = db.batch();
+  const snapshot = await db.collection(FIRESTORE_PRODUCTS_COLLECTION).get();
+  const incomingIds = new Set(productList.map(product => String(product.id)));
+
+  snapshot.forEach(doc => {
+    if (!incomingIds.has(doc.id)) {
+      batch.delete(doc.ref);
+    }
+  });
+
+  productList.forEach(product => {
+    const normalized = normalizeProduct(product);
+    batch.set(db.collection(FIRESTORE_PRODUCTS_COLLECTION).doc(String(normalized.id)), normalized);
+  });
+
+  await batch.commit();
+}
+
+function getDefaultProducts() {
+  return [
+    {id:5, name:'Alfombras Kilim pack 5 ud', price:285000, img:'https://picsum.photos/id/29/800/900', discount:18, category:'Textiles', stock:10},
+    {id:6, name:'Toallas Hammam pack 20 ud', price:145000, img:'https://picsum.photos/id/160/800/900', discount:0, category:'Textiles', stock:10},
+    {id:7, name:'Bata de Baño Turca', price:39000, img:'https://picsum.photos/id/1011/800/900', discount:5, category:'Textiles', stock:10},
+    {id:8, name:'Jabón Alepo Natural caja 50 ud', price:95000, img:'https://picsum.photos/id/201/800/900', discount:0, category:'Aseo', stock:10},
+    {id:9, name:'Jabón Líquido Perfumado caja 12 ud', price:35000, img:'https://picsum.photos/id/405/800/900', discount:0, category:'Aseo', stock:10},
+    {id:10, name:'Pasta Dental Premium pack 24 ud', price:45000, img:'https://picsum.photos/id/455/800/900', discount:5, category:'Aseo', stock:10},
+    {id:11, name:'Champú Natural Turco pack 10 ud', price:48000, img:'https://picsum.photos/id/420/800/900', discount:8, category:'Cuidado Capilar', stock:10},
+    {id:12, name:'Acondicionador Herbal pack 10 ud', price:52000, img:'https://picsum.photos/id/1025/800/900', discount:0, category:'Cuidado Capilar', stock:10},
+    {id:13, name:'Crema Corporal Humectante caja 24 ud', price:52000, img:'https://picsum.photos/id/435/800/900', discount:0, category:'Cuidado Adulto', stock:10},
+    {id:14, name:'Desodorante Spray pack 12 ud', price:38000, img:'https://picsum.photos/id/445/800/900', discount:0, category:'Cuidado Adulto', stock:10},
+    {id:15, name:'Loción Corporal Aromática caja 10 ud', price:62000, img:'https://picsum.photos/id/465/800/900', discount:0, category:'Cuidado Adulto', stock:10}
+  ];
+}
+
+async function hydrateProductsFromFirestore() {
+  if (remoteProductsHydrationPromise) return remoteProductsHydrationPromise;
+
+  remoteProductsHydrationPromise = (async () => {
+    const localProducts = getInitialProducts();
+
+    try {
+      const remoteProducts = await fetchProductsFromFirestore();
+      if (remoteProducts.length > 0) {
+        products = remoteProducts;
+        localStorage.setItem('products', JSON.stringify(products));
+        return;
+      }
+
+      products = localProducts.length > 0 ? localProducts : getDefaultProducts();
+      localStorage.setItem('products', JSON.stringify(products));
+      if (products.length > 0) {
+        await persistProductsToFirestore(products);
+      }
+    } catch (error) {
+      console.warn('No se pudo sincronizar productos con Firestore. Se usará almacenamiento local.', error);
+      products = localProducts.length > 0 ? localProducts : getDefaultProducts();
+      localStorage.setItem('products', JSON.stringify(products));
+    }
+  })();
+
+  return remoteProductsHydrationPromise;
+}
+
 // Sincronizar products con localStorage
 function syncProductsFromStorage() {
   const saved = localStorage.getItem('products');
@@ -273,25 +419,16 @@ function initSearchSuggestions() {
 function getInitialProducts() {
   const saved = localStorage.getItem('products');
   if (saved) return JSON.parse(saved);
-  return [
-    {id:5, name:"Alfombras Kilim pack 5 ud", price:285000, img:"https://picsum.photos/id/29/800/900", discount:18, category:"Textiles", stock:10},
-    {id:6, name:"Toallas Hammam pack 20 ud", price:145000, img:"https://picsum.photos/id/160/800/900", discount:0, category:"Textiles", stock:10},
-    {id:7, name:"Bata de Baño Turca", price:39000, img:"https://picsum.photos/id/1011/800/900", discount:5, category:"Textiles", stock:10},
-    {id:8, name:"Jabón Alepo Natural caja 50 ud", price:95000, img:"https://picsum.photos/id/201/800/900", discount:0, category:"Aseo", stock:10},
-    {id:9, name:"Jabón Líquido Perfumado caja 12 ud", price:35000, img:"https://picsum.photos/id/405/800/900", discount:0, category:"Aseo", stock:10},
-    {id:10, name:"Pasta Dental Premium pack 24 ud", price:45000, img:"https://picsum.photos/id/455/800/900", discount:5, category:"Aseo", stock:10},
-    {id:11, name:"Champú Natural Turco pack 10 ud", price:48000, img:"https://picsum.photos/id/420/800/900", discount:8, category:"Cuidado Capilar", stock:10},
-    {id:12, name:"Acondicionador Herbal pack 10 ud", price:52000, img:"https://picsum.photos/id/1025/800/900", discount:0, category:"Cuidado Capilar", stock:10},
-    {id:13, name:"Crema Corporal Humectante caja 24 ud", price:52000, img:"https://picsum.photos/id/435/800/900", discount:0, category:"Cuidado Adulto", stock:10},
-    {id:14, name:"Desodorante Spray pack 12 ud", price:38000, img:"https://picsum.photos/id/445/800/900", discount:0, category:"Cuidado Adulto", stock:10},
-    {id:15, name:"Loción Corporal Aromática caja 10 ud", price:62000, img:"https://picsum.photos/id/465/800/900", discount:0, category:"Cuidado Adulto", stock:10},
-  ];
+  return getDefaultProducts();
 }
 
 let products = getInitialProducts();
 
 function saveProducts() {
   localStorage.setItem('products', JSON.stringify(products));
+  persistProductsToFirestore(products).catch(error => {
+    console.warn('No se pudo guardar productos en Firestore.', error);
+  });
 }
 
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
@@ -850,7 +987,8 @@ function checkout() {
   window.open(`https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent(message)}`, '_blank');
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+  await hydrateProductsFromFirestore();
   ensureSuccessToast();
   ensureProductDetailModal();
   initSearchSuggestions();

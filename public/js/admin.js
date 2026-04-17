@@ -1,3 +1,126 @@
+const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyBIN5wILjhmFhHFxBwuJuKPsZyUNziPDFQ',
+  authDomain: 'losturcos2.firebaseapp.com',
+  projectId: 'losturcos2',
+  storageBucket: 'losturcos2.firebasestorage.app',
+  messagingSenderId: '353259282248',
+  appId: '1:353259282248:web:212a5dbe7ee28ed5cedd7d'
+};
+
+const FIRESTORE_PRODUCTS_COLLECTION = 'products';
+let firebaseAppReadyPromise = null;
+
+function loadFirebaseScript(src) {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) {
+      if (existing.dataset.loaded === 'true') {
+        resolve();
+        return;
+      }
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => reject(new Error(`No se pudo cargar ${src}`)), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.addEventListener('load', () => {
+      script.dataset.loaded = 'true';
+      resolve();
+    }, { once: true });
+    script.addEventListener('error', () => reject(new Error(`No se pudo cargar ${src}`)), { once: true });
+    document.head.appendChild(script);
+  });
+}
+
+function initFirebaseApp() {
+  if (firebaseAppReadyPromise) return firebaseAppReadyPromise;
+
+  firebaseAppReadyPromise = Promise.all([
+    loadFirebaseScript('https://www.gstatic.com/firebasejs/12.12.0/firebase-app-compat.js'),
+    loadFirebaseScript('https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore-compat.js')
+  ]).then(() => {
+    if (!window.firebase) {
+      throw new Error('Firebase no quedó disponible en ventana global.');
+    }
+
+    if (!window.firebase.apps.length) {
+      window.firebase.initializeApp(FIREBASE_CONFIG);
+    }
+
+    return window.firebase.firestore();
+  });
+
+  return firebaseAppReadyPromise;
+}
+
+function normalizeProduct(product) {
+  return {
+    id: Number(product.id),
+    name: product.name || '',
+    price: Number(product.price) || 0,
+    stock: Number(product.stock) || 0,
+    category: product.category || '',
+    discount: Number(product.discount) || 0,
+    img: product.img || '',
+    details: product.details || '',
+    showcase: product.showcase || 'index'
+  };
+}
+
+async function fetchProductsFromFirestore() {
+  const db = await initFirebaseApp();
+  const snapshot = await db.collection(FIRESTORE_PRODUCTS_COLLECTION).get();
+  return snapshot.docs
+    .map(doc => normalizeProduct(doc.data()))
+    .sort((left, right) => left.id - right.id);
+}
+
+async function persistProductsToFirestore(productList) {
+  const db = await initFirebaseApp();
+  const batch = db.batch();
+  const snapshot = await db.collection(FIRESTORE_PRODUCTS_COLLECTION).get();
+  const incomingIds = new Set(productList.map(product => String(product.id)));
+
+  snapshot.forEach(doc => {
+    if (!incomingIds.has(doc.id)) {
+      batch.delete(doc.ref);
+    }
+  });
+
+  productList.forEach(product => {
+    const normalized = normalizeProduct(product);
+    batch.set(db.collection(FIRESTORE_PRODUCTS_COLLECTION).doc(String(normalized.id)), normalized);
+  });
+
+  await batch.commit();
+}
+
+async function hydrateProductsFromFirestore() {
+  const localProducts = getInitialProducts();
+
+  try {
+    const remoteProducts = await fetchProductsFromFirestore();
+    if (remoteProducts.length > 0) {
+      products = remoteProducts;
+      localStorage.setItem('products', JSON.stringify(products));
+      return;
+    }
+
+    products = localProducts;
+    localStorage.setItem('products', JSON.stringify(products));
+    if (products.length > 0) {
+      await persistProductsToFirestore(products);
+    }
+  } catch (error) {
+    console.warn('No se pudo sincronizar productos con Firestore. Se usará almacenamiento local.', error);
+    products = localProducts;
+    localStorage.setItem('products', JSON.stringify(products));
+  }
+}
+
 function getInitialProducts() {
   const saved = localStorage.getItem('products');
   if (saved) {
@@ -40,6 +163,9 @@ let products = getInitialProducts();
 
 function saveProducts() {
   localStorage.setItem('products', JSON.stringify(products));
+  persistProductsToFirestore(products).catch(error => {
+    console.warn('No se pudo guardar productos en Firestore.', error);
+  });
 }
 
 function checkAdminPassword() {
@@ -161,7 +287,9 @@ document.getElementById('product-form').onsubmit = function(e) {
   }
 };
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+  await hydrateProductsFromFirestore();
+
   document.getElementById('logout-btn').addEventListener('click', function(e) {
     e.preventDefault();
     sessionStorage.removeItem('adminAuthenticated');
