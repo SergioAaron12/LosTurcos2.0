@@ -7,20 +7,22 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="asset/css/custom.css"/>
+  <link rel="stylesheet" href="css/custom.css"/>
 </head>
 <body class="bg-gray-50 min-h-screen">
-  <div class="max-w-2xl mx-auto py-10">
+  <div class="max-w-2xl mx-auto px-4 py-8 md:py-10">
     <h1 class="text-3xl font-bold mb-8 text-center text-gold-lux">Modo Administrador</h1>
     <div id="admin-auth" class="mb-8 text-center">
-      <input id="admin-password" type="password" placeholder="Contraseña de administrador" class="border rounded px-3 py-2 mr-2" />
-      <button onclick="checkAdminPassword()" class="px-3 py-2 bg-blue-600 text-white rounded">Entrar</button>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <input id="admin-password" type="password" placeholder="Contraseña de administrador" class="border rounded px-3 py-2 w-full sm:w-auto sm:min-w-[280px]" />
+        <button onclick="checkAdminPassword()" class="px-3 py-2 bg-blue-600 text-white rounded w-full sm:w-auto">Entrar</button>
+      </div>
       <div id="admin-auth-error" class="text-red-600 mt-2 text-sm hidden">Contraseña incorrecta</div>
     </div>
     <div id="admin-panel" class="hidden">
-      <div class="flex justify-between mb-4">
-        <button type="button" onclick="window.location.href='index.html'" class="px-3 py-2 bg-gold-lux text-dark-royal rounded font-semibold hover:bg-yellow-400 transition">Ir al Catálogo</button>
-        <button type="button" id="logout-btn" class="px-3 py-2 bg-red-600 text-white rounded">Cerrar sesión</button>
+      <div class="flex flex-col sm:flex-row gap-3 justify-between mb-4">
+        <button type="button" onclick="window.location.href='index.html'" class="px-3 py-2 bg-gold-lux text-dark-royal rounded font-semibold hover:bg-yellow-400 transition w-full sm:w-auto">Ir al Catálogo</button>
+        <button type="button" id="logout-btn" class="px-3 py-2 bg-red-600 text-white rounded w-full sm:w-auto">Cerrar sesión</button>
       </div>
       <form id="product-form" class="border rounded p-4 mb-6 bg-white shadow">
         <input type="hidden" id="product-id" />
@@ -67,9 +69,9 @@
             </select>
           </label>
         </div>
-        <div class="flex gap-2 mt-2">
-          <button type="submit" class="px-3 py-2 bg-blue-600 text-white rounded">Guardar</button>
-          <button type="button" onclick="resetForm()" class="px-3 py-2 bg-gray-400 text-white rounded">Limpiar</button>
+        <div class="flex flex-col sm:flex-row gap-2 mt-2">
+          <button type="submit" class="px-3 py-2 bg-blue-600 text-white rounded w-full sm:w-auto">Guardar</button>
+          <button type="button" onclick="resetForm()" class="px-3 py-2 bg-gray-400 text-white rounded w-full sm:w-auto">Limpiar</button>
         </div>
       </form>
       <h2 class="text-xl font-bold mb-4">Productos</h2>
