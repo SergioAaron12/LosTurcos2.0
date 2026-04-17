@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Cuidado Capilar – Los Turco 2.0</title>
+  <title>Cuidado Bucal – Los Turco 2.0</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -88,26 +88,16 @@
   </div>
   <header id="inicio" class="royal-bg min-h-[40vh] flex items-center relative pt-20 pb-10">
     <div class="relative max-w-6xl mx-auto px-6 text-center text-black">
-      <h1 class="text-4xl md:text-6xl ornate-serif font-bold leading-tight mb-5 drop-shadow-md">Cuidado Capilar</h1>
-      <p class="text-base md:text-lg text-black/60 mt-4 max-w-3xl mx-auto">Catálogo de productos de cuidado capilar</p>
+      <h1 class="text-4xl md:text-6xl ornate-serif font-bold leading-tight mb-5 drop-shadow-md">Cuidado Bucal</h1>
+      <p class="text-base md:text-lg text-black/60 mt-4 max-w-3xl mx-auto">Catálogo de productos de cuidado bucal</p>
     </div>
   </header>
   <section id="productos" class="py-16">
     <div class="max-w-7xl mx-auto px-6">
-      <div class="flex justify-end mb-6">
-        <label for="ordenar" class="mr-2 font-medium text-dark-royal">Ordenar por:</label>
-        <select id="ordenar" class="border rounded px-3 py-2 text-dark-royal" onchange="ordenarProductos()">
-          <option value="default">Por defecto</option>
-          <option value="precio-asc">Precio: menor a mayor</option>
-          <option value="precio-desc">Precio: mayor a menor</option>
-          <option value="nombre-asc">Nombre A-Z</option>
-          <option value="nombre-desc">Nombre Z-A</option>
-        </select>
-      </div>
       <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
     </div>
   </section>
- <footer class="bg-white text-dark-royal py-12">
+   <footer class="bg-white text-dark-royal py-12">
     <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-10">
       <div>
         <div class="flex items-center gap-3 mb-4">
@@ -148,20 +138,10 @@
   </footer>
   <script src="../js/main.js"></script>
 <script>
-  function renderCategoriaCapilar() {
+  function renderCategoriaBucal() {
     let productos = localStorage.getItem('products');
     productos = productos ? JSON.parse(productos) : [];
-    let productosCat = productos.filter(p => p.category && p.category.toLowerCase() === 'cuidado capilar');
-    const orden = document.getElementById('ordenar')?.value;
-    if (orden === 'nombre-asc') {
-      productosCat = productosCat.sort((a, b) => a.name.localeCompare(b.name));
-    } else if (orden === 'nombre-desc') {
-      productosCat = productosCat.sort((a, b) => b.name.localeCompare(a.name));
-    } else if (orden === 'precio-asc') {
-      productosCat = productosCat.sort((a, b) => a.price - b.price);
-    } else if (orden === 'precio-desc') {
-      productosCat = productosCat.sort((a, b) => b.price - a.price);
-    }
+    let productosCat = productos.filter(p => p.category && p.category.toLowerCase() === 'cuidado bucal');
     const grid = document.getElementById('products-grid');
     grid.innerHTML = '';
     if (productosCat.length === 0) {
@@ -186,10 +166,7 @@
       grid.appendChild(card);
     });
   }
-  document.addEventListener('DOMContentLoaded', function() {
-    renderCategoriaCapilar();
-    document.getElementById('ordenar').addEventListener('change', renderCategoriaCapilar);
-  });
+  document.addEventListener('DOMContentLoaded', renderCategoriaBucal);
 </script>
 </body>
 </html>

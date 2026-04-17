@@ -10,6 +10,32 @@
   <link rel="stylesheet" href="css/custom.css"/>
 </head>
 <body>
+  <style>
+    #inicio {
+      background: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('asset/body.png') center center / cover no-repeat;
+      position: relative;
+      z-index: 1;
+      min-height: 420px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #inicio .bg-overlay {
+      display: none;
+    }
+    #inicio .header-content {
+      position: relative;
+      z-index: 3;
+      width: 100%;
+      padding-top: 2rem;
+      padding-bottom: 2rem;
+      background: rgba(0,0,0,0.35);
+      border-radius: 1rem;
+      box-shadow: 0 8px 32px 0 rgba(0,0,0,0.25);
+      max-width: 700px;
+      margin: 0 auto;
+    }
+  </style>
   <!-- NAVBAR PRINCIPAL -->
   <nav class="bg-sky-400 text-white text-center py-2 text-xs md:text-sm font-semibold border-b border-sky-500 shadow-md">
     🚚 DESPACHO DISPONIBLE SOLO A REGIÓN METROPOLITANA 🚚
@@ -22,9 +48,12 @@
         </div>
       </div>
       <div class="flex-1 flex justify-center">
-        <form onsubmit="event.preventDefault(); buscarProductos();" class="w-full max-w-md flex">
-          <input id="buscador" type="text" placeholder="Buscar productos..." class="w-full px-6 py-2 rounded-l-lg border border-gold-lux focus:outline-none focus:ring-2 focus:ring-turquoise-jewel text-lg" style="min-width:500px; max-width:900px;" />
-          <button type="submit" class="px-6 py-2 bg-gold-lux text-dark-royal font-bold rounded-r-lg hover:bg-yellow-400 transition text-lg">Buscar</button>
+        <form onsubmit="event.preventDefault(); buscarProductos();" class="w-full max-w-md relative">
+          <div class="flex">
+            <input id="buscador" type="text" placeholder="Buscar productos..." autocomplete="off" class="w-full px-6 py-2 rounded-l-lg border border-gold-lux focus:outline-none focus:ring-2 focus:ring-turquoise-jewel text-lg" style="min-width:500px; max-width:900px;" />
+            <button type="submit" class="px-6 py-2 bg-gold-lux text-dark-royal font-bold rounded-r-lg hover:bg-yellow-400 transition text-lg">Buscar</button>
+          </div>
+          <div id="buscador-sugerencias" class="hidden absolute left-0 right-0 top-full mt-2 bg-white border border-gold-lux/30 rounded-xl shadow-2xl overflow-hidden z-50"></div>
         </form>
       </div>
       <div class="flex items-center gap-6">
@@ -32,31 +61,159 @@
           <i class="fa-solid fa-bag-shopping"></i>
           <span id="cart-count" class="absolute -top-3 -right-3 bg-gold-lux text-dark-royal text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-sm">0</span>
         </button>
-        <button class="text-gold-lux text-2xl hover:text-turquoise-jewel transition-colors"><i class="fa-solid fa-user"></i></button>
       </div>
     </div>
   </nav>
   <nav class="w-full bg-[#2d3486] py-3 shadow">
     <div class="max-w-7xl mx-auto flex items-center justify-center px-6">
       <ul class="flex-1 flex flex-wrap justify-center gap-8 text-white font-medium text-base">
-        <li><a href="html/alimentos.html" class="hover:underline">Alimentos</a></li>
+        <li><a href="html/regalos.html" class="hover:underline">Regalos</a></li>
+        <li><a href="html/adulto-mayor.html" class="hover:underline">Adulto mayor</a></li>
+        <li><a href="html/mundo-bebe.html" class="hover:underline">Mundo Bebé</a></li>
+        <li><a href="html/proteccion-solar.html" class="hover:underline">Protección Solar</a></li>
         <li><a href="html/aseo.html" class="hover:underline">Aseo</a></li>
-        <li><a href="html/textiles.html" class="hover:underline">Textiles</a></li>
+        <li><a href="html/limpieza-de-ropa.html" class="hover:underline">Limpieza de ropa</a></li>
+        <li><a href="html/auto.html" class="hover:underline">Auto</a></li>
+        <li><a href="html/bano-y-cocina.html" class="hover:underline">Baño y Cocina</a></li>
+        <li><a href="html/iluminacion-y-pilas.html" class="hover:underline">Iluminación y Pilas</a></li>
+        <li><a href="html/pisos-y-muebles.html" class="hover:underline">Pisos y Muebles</a></li>
+        <li><a href="html/cuidado-bucal.html" class="hover:underline">Cuidado Bucal</a></li>
         <li><a href="html/cuidado-capilar.html" class="hover:underline">Cuidado Capilar</a></li>
-        <li><a href="html/cuidado-adulto.html" class="hover:underline">Cuidado Adulto</a></li>
-        <li><a href="index.html" class="hover:underline">Todos</a></li>
+        <li><a href="html/cuidado-mujer.html" class="hover:underline">Cuidado Mujer</a></li>
+        <li><a href="html/cuidado-personal.html" class="hover:underline">Higiene y Cuidado Personal</a></li>
+        <li><a href="html/repelentes.html" class="hover:underline">Repelentes</a></li>
+        <li><a href="html/the-pink-stuff.html" class="hover:underline">The Pink Stuff</a></li>
+        <li><a href="html/papeleria-industrial.html" class="hover:underline">Papeleria Industrial</a></li>
+        <li><a href="html/preservativos.html" class="hover:underline">Preservativos</a></li>
+        <li><a href="html/todos.html" class="hover:underline">Todos</a></li>
       </ul>
     </div>
   </nav>
-  <header id="inicio" class="royal-bg min-h-[40vh] flex items-center relative pt-20 pb-10">
-    <div class="relative max-w-6xl mx-auto px-6 text-center text-white">
-      <h1 class="text-4xl md:text-6xl ornate-serif font-bold leading-tight mb-5 drop-shadow-md">Bienvenido a Los Turco 2.0</h1>
-      <p class="text-base md:text-lg text-gray-100 mt-4 max-w-3xl mx-auto">Tienda mayorista de productos turcos auténticos. Explora nuestras categorías y encuentra los mejores productos importados directamente desde Turquía.</p>
+  <!-- INFORMACIÓN DESTACADA -->
+  <div class="bg-gray-100 py-6 border-b border-gray-300">
+    <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-0">
+      <div class="flex items-center gap-4 border-r border-gray-400 pr-8 py-2">
+        <div class="text-3xl text-gold-lux flex-shrink-0">
+          <i class="fa-solid fa-location-dot"></i>
+        </div>
+        <div class="flex-1">
+          <h4 class="text-dark-royal font-bold text-base md:text-lg">Tienda online</h4>
+          <p class="text-dark-royal/60 text-sm">Exclusiva RM</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-4 border-r border-gray-400 px-8 py-2">
+        <div class="text-3xl text-gold-lux flex-shrink-0">
+          <i class="fa-solid fa-tag"></i>
+        </div>
+        <div class="flex-1">
+          <h4 class="text-dark-royal font-bold text-base md:text-lg">Precios por mayor</h4>
+          <p class="text-dark-royal/60 text-sm">Desde 2 o 3 unidades</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-4 pl-8 py-2">
+        <div class="text-3xl text-gold-lux flex-shrink-0">
+          <i class="fa-solid fa-truck"></i>
+        </div>
+        <div class="flex-1">
+          <h4 class="text-dark-royal font-bold text-base md:text-lg">Despacho Gratis</h4>
+          <p class="text-dark-royal/60 text-sm">Compras sobre $50.000</p>
+        </div>
+      </div>
     </div>
-  </header>
+  </div>
+  <!-- OFERTAS -->
+  <section id="ofertas" class="py-12 bg-yellow-100">
+    <div class="max-w-7xl mx-auto px-6">
+      <h2 class="text-2xl font-bold text-dark-royal mb-6">Ofertas</h2>
+      <div id="ofertas-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+  </section>
+
+  <!-- NUEVOS PRODUCTOS -->
+  <section id="nuevos-productos" class="py-12 bg-white">
+    <div class="max-w-7xl mx-auto px-6">
+      <h2 class="text-2xl font-bold text-dark-royal mb-6">Nuevos Productos</h2>
+      <div id="nuevos-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+    </div>
+  </section>
   <section id="productos" class="py-16">
     <div class="max-w-7xl mx-auto px-6">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+        <div class="text-lg font-semibold text-dark-royal" id="productos-encontrados"></div>
+        <div class="flex items-center gap-2">
+          <label for="ordenar" class="font-medium text-dark-royal">Ordenar por:</label>
+          <select id="ordenar" class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-turquoise-jewel">
+            <option value="relevancia">Relevancia</option>
+            <option value="nombre">Nombre: A - Z</option>
+            <option value="precio-menor">Precio: Menor a mayor</option>
+            <option value="precio-mayor">Precio: Mayor a menor</option>
+          </select>
+        </div>
+      </div>
       <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+          <!-- Modal Carrito -->
+          <div id="cart-modal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+            <div class="bg-white rounded-lg shadow-lg w-full max-w-md relative overflow-hidden">
+              <button onclick="toggleCart()" class="absolute top-2 right-2 text-gray-500 hover:text-red-500"><i class="fa fa-times"></i></button>
+              <div class="p-6 border-b">
+                <h2 class="text-xl font-bold">Carrito de Compras</h2>
+              </div>
+              <div id="cart-items" class="p-6 max-h-[55vh] overflow-y-auto"></div>
+              <div class="p-6 bg-gray-50 border-t space-y-3">
+                <div class="flex items-center justify-between text-sm text-gray-600">
+                  <span>Subtotal</span>
+                  <span id="cart-subtotal">$0</span>
+                </div>
+                <div class="flex items-center justify-between text-sm text-green-700">
+                  <span>Descuento</span>
+                  <span id="cart-discount">-$0</span>
+                </div>
+                <div class="flex items-center justify-between text-lg font-bold">
+                  <span>Total</span>
+                  <span id="cart-total">$0</span>
+                </div>
+                <button onclick="checkout()" class="w-full px-4 py-3 bg-gold-lux text-dark-royal rounded hover:bg-yellow-400 transition font-semibold">Solicitar cotización</button>
+              </div>
+            </div>
+          </div>
+          <!-- Modal Admin -->
+          <div id="admin-modal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+            <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6 relative">
+              <button onclick="toggleAdmin()" class="absolute top-2 right-2 text-gray-500 hover:text-red-500"><i class="fa fa-times"></i></button>
+              <h2 class="text-xl font-bold mb-4">Modo Administrador</h2>
+              <div id="admin-auth" class="mb-6">
+                <input id="admin-password" type="password" placeholder="Contraseña de administrador" class="border rounded px-3 py-2 mr-2" />
+                <button onclick="checkAdminPassword()" class="px-3 py-2 bg-blue-600 text-white rounded">Entrar</button>
+                <div id="admin-auth-error" class="text-red-600 mt-2 text-sm hidden">Contraseña incorrecta</div>
+              </div>
+              <div id="admin-panel" class="hidden">
+                <div id="admin-products-grid" class="mb-6"></div>
+                <button class="px-4 py-2 bg-green-600 text-white rounded mb-4" onclick="showProductForm()">Agregar Producto</button>
+                <form id="product-form" class="border rounded p-4 mb-4 hidden bg-gray-50">
+                  <input type="hidden" id="product-id" />
+                  <div class="mb-2"><label>Nombre: <input id="product-name" class="border rounded px-2 py-1 w-full" required /></label></div>
+                  <div class="mb-2"><label>Precio: <input id="product-price" type="number" min="0" class="border rounded px-2 py-1 w-full" required /></label></div>
+                  <div class="mb-2"><label>Stock: <input id="product-stock" type="number" min="0" class="border rounded px-2 py-1 w-full" required /></label></div>
+                  <div class="mb-2">
+                    <label>Categoría:
+                      <select id="product-category" class="border rounded px-2 py-1 w-full" required>
+                        <option value="">Selecciona una categoría</option>
+                        <option value="Alimentos">Alimentos</option>
+                        <option value="Aseo">Aseo</option>
+                        <option value="Todos">Todos</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="mb-2"><label>Descuento (%): <input id="product-discount" type="number" min="0" max="100" class="border rounded px-2 py-1 w-full" /></label></div>
+                  <div class="mb-2"><label>Imagen (URL): <input id="product-img" class="border rounded px-2 py-1 w-full" required /></label></div>
+                  <div class="flex gap-2 mt-2">
+                    <button type="submit" class="px-3 py-2 bg-blue-600 text-white rounded">Guardar</button>
+                    <button type="button" onclick="hideProductForm()" class="px-3 py-2 bg-gray-400 text-white rounded">Cancelar</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
     </div>
   </section>
   <footer class="bg-white text-dark-royal py-12">
@@ -92,6 +249,11 @@
         <button class="btn-lux w-full py-3 rounded-full font-semibold text-sm hover:scale-105 transition">
           Solicitar acceso mayorista
         </button>
+        <div class="mt-6 text-center">
+          <a href="admin.html" class="text-xs text-gray-400 hover:text-blue-600 underline">
+            <i class="fa-solid fa-user-shield mr-1"></i>Modo Administrador
+          </a>
+        </div>
       </div>
     </div>
     <div class="text-center text-dark-royal/50 text-xs mt-10 pt-6 border-t border-dark-royal/10">

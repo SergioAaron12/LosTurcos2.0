@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Cuidado Capilar – Los Turco 2.0</title>
+  <title>Cuidado Mujer – Los Turco 2.0</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -88,8 +88,8 @@
   </div>
   <header id="inicio" class="royal-bg min-h-[40vh] flex items-center relative pt-20 pb-10">
     <div class="relative max-w-6xl mx-auto px-6 text-center text-black">
-      <h1 class="text-4xl md:text-6xl ornate-serif font-bold leading-tight mb-5 drop-shadow-md">Cuidado Capilar</h1>
-      <p class="text-base md:text-lg text-black/60 mt-4 max-w-3xl mx-auto">Catálogo de productos de cuidado capilar</p>
+      <h1 class="text-4xl md:text-6xl ornate-serif font-bold leading-tight mb-5 drop-shadow-md">Cuidado Mujer</h1>
+      <p class="text-base md:text-lg text-black/60 mt-4 max-w-3xl mx-auto">Catálogo de productos para el cuidado de la mujer</p>
     </div>
   </header>
   <section id="productos" class="py-16">
@@ -148,10 +148,10 @@
   </footer>
   <script src="../js/main.js"></script>
 <script>
-  function renderCategoriaCapilar() {
+  function renderCategoriaMujer() {
     let productos = localStorage.getItem('products');
     productos = productos ? JSON.parse(productos) : [];
-    let productosCat = productos.filter(p => p.category && p.category.toLowerCase() === 'cuidado capilar');
+    let productosCat = productos.filter(p => p.category && p.category.toLowerCase() === 'cuidado mujer');
     const orden = document.getElementById('ordenar')?.value;
     if (orden === 'nombre-asc') {
       productosCat = productosCat.sort((a, b) => a.name.localeCompare(b.name));
@@ -187,8 +187,8 @@
     });
   }
   document.addEventListener('DOMContentLoaded', function() {
-    renderCategoriaCapilar();
-    document.getElementById('ordenar').addEventListener('change', renderCategoriaCapilar);
+    renderCategoriaMujer();
+    document.getElementById('ordenar').addEventListener('change', renderCategoriaMujer);
   });
 </script>
 </body>

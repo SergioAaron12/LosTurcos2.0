@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Administración de Productos - Los Turco 2.0</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="asset/css/custom.css"/>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div class="max-w-2xl mx-auto py-10">
+    <h1 class="text-3xl font-bold mb-8 text-center text-gold-lux">Modo Administrador</h1>
+    <div id="admin-auth" class="mb-8 text-center">
+      <input id="admin-password" type="password" placeholder="Contraseña de administrador" class="border rounded px-3 py-2 mr-2" />
+      <button onclick="checkAdminPassword()" class="px-3 py-2 bg-blue-600 text-white rounded">Entrar</button>
+      <div id="admin-auth-error" class="text-red-600 mt-2 text-sm hidden">Contraseña incorrecta</div>
+    </div>
+    <div id="admin-panel" class="hidden">
+      <div class="flex justify-between mb-4">
+        <button type="button" onclick="window.location.href='index.html'" class="px-3 py-2 bg-gold-lux text-dark-royal rounded font-semibold hover:bg-yellow-400 transition">Ir al Catálogo</button>
+        <button type="button" id="logout-btn" class="px-3 py-2 bg-red-600 text-white rounded">Cerrar sesión</button>
+      </div>
+      <form id="product-form" class="border rounded p-4 mb-6 bg-white shadow">
+        <input type="hidden" id="product-id" />
+        <div class="mb-2"><label>Nombre: <input id="product-name" class="border rounded px-2 py-1 w-full" required /></label></div>
+        <div class="mb-2"><label>Precio: <input id="product-price" type="number" min="0" class="border rounded px-2 py-1 w-full" required /></label></div>
+        <div class="mb-2"><label>Stock: <input id="product-stock" type="number" min="0" class="border rounded px-2 py-1 w-full" required /></label></div>
+        <div class="mb-2">
+          <label>Categoría:
+            <select id="product-category" class="border rounded px-2 py-1 w-full" required>
+              <option value="">Selecciona una categoría</option>
+              <option value="Aseo">Aseo</option>
+              <option value="Cuidado Adulto">Cuidado Adulto</option>
+              <option value="Cuidado Capilar">Cuidado Capilar</option>
+              <option value="Cuidado Bucal">Cuidado Bucal</option>
+              <option value="Cuidado Mujer">Cuidado Mujer</option>
+              <option value="Cuidado Personal">Cuidado Personal</option>
+              <option value="Limpieza de ropa">Limpieza de ropa</option>
+              <option value="Auto">Auto</option>
+              <option value="Baño y Cocina">Baño y Cocina</option>
+              <option value="Iluminación y Pilas">Iluminación y Pilas</option>
+              <option value="Pisos y Muebles">Pisos y Muebles</option>
+              <option value="Repelentes">Repelentes</option>
+              <option value="The Pink Stuff">The Pink Stuff</option>
+              <option value="Papeleria Industrial">Papeleria Industrial</option>
+              <option value="Preservativos">Preservativos</option>
+              <option value="Regalos">Regalos</option>
+              <option value="Mundo Bebé">Mundo Bebé</option>
+              <option value="Textiles">Textiles</option>
+              <option value="Todos">Todos</option>
+            </select>
+          </label>
+        </div>
+        <div class="mb-2"><label>Descuento (%): <input id="product-discount" type="number" min="0" max="100" class="border rounded px-2 py-1 w-full" /></label></div>
+        <div class="mb-2"><label>Detalles: <textarea id="product-details" class="border rounded px-2 py-1 w-full" rows="2"></textarea></label></div>
+        <div class="mb-2"><label>Imagen (URL): <input id="product-img" class="border rounded px-2 py-1 w-full mb-1" /></label></div>
+        <div class="mb-2"><label>O subir imagen: <input id="product-img-file" type="file" accept="image/*" class="border rounded px-2 py-1 w-full" /></label></div>
+        <div class="mb-2">
+          <label>Mostrar en:
+            <select id="product-showcase" class="border rounded px-2 py-1 w-full" required>
+              <option value="index">Catálogo general (index)</option>
+              <option value="ofertas">Ofertas</option>
+              <option value="nuevos">Nuevos productos</option>
+              <option value="populares">Productos populares</option>
+            </select>
+          </label>
+        </div>
+        <div class="flex gap-2 mt-2">
+          <button type="submit" class="px-3 py-2 bg-blue-600 text-white rounded">Guardar</button>
+          <button type="button" onclick="resetForm()" class="px-3 py-2 bg-gray-400 text-white rounded">Limpiar</button>
+        </div>
+      </form>
+      <h2 class="text-xl font-bold mb-4">Productos</h2>
+      <div id="admin-products-grid"></div>
+    </div>
+  </div>
+  <script src="js/admin.js"></script>
+</body>
+</html>

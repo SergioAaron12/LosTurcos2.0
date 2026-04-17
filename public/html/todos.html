@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Cuidado Capilar – Los Turco 2.0</title>
+  <title>Alimentos – Los Turco 2.0</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -64,21 +64,27 @@
   <div class="bg-gray-100 py-6 border-b border-gray-300">
     <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-0">
       <div class="flex items-center gap-4 border-r border-gray-400 pr-8 py-2">
-        <div class="text-3xl text-gold-lux flex-shrink-0"><i class="fa-solid fa-location-dot"></i></div>
+        <div class="text-3xl text-gold-lux flex-shrink-0">
+          <i class="fa-solid fa-location-dot"></i>
+        </div>
         <div class="flex-1">
           <h4 class="text-dark-royal font-bold text-base md:text-lg">Tienda online</h4>
           <p class="text-dark-royal/60 text-sm">Exclusiva RM</p>
         </div>
       </div>
       <div class="flex items-center gap-4 border-r border-gray-400 px-8 py-2">
-        <div class="text-3xl text-gold-lux flex-shrink-0"><i class="fa-solid fa-tag"></i></div>
+        <div class="text-3xl text-gold-lux flex-shrink-0">
+          <i class="fa-solid fa-tag"></i>
+        </div>
         <div class="flex-1">
           <h4 class="text-dark-royal font-bold text-base md:text-lg">Precios por mayor</h4>
           <p class="text-dark-royal/60 text-sm">Desde 2 o 3 unidades</p>
         </div>
       </div>
       <div class="flex items-center gap-4 pl-8 py-2">
-        <div class="text-3xl text-gold-lux flex-shrink-0"><i class="fa-solid fa-truck"></i></div>
+        <div class="text-3xl text-gold-lux flex-shrink-0">
+          <i class="fa-solid fa-truck"></i>
+        </div>
         <div class="flex-1">
           <h4 class="text-dark-royal font-bold text-base md:text-lg">Despacho Gratis</h4>
           <p class="text-dark-royal/60 text-sm">Compras sobre $50.000</p>
@@ -88,25 +94,59 @@
   </div>
   <header id="inicio" class="royal-bg min-h-[40vh] flex items-center relative pt-20 pb-10">
     <div class="relative max-w-6xl mx-auto px-6 text-center text-black">
-      <h1 class="text-4xl md:text-6xl ornate-serif font-bold leading-tight mb-5 drop-shadow-md">Cuidado Capilar</h1>
-      <p class="text-base md:text-lg text-black/60 mt-4 max-w-3xl mx-auto">Catálogo de productos de cuidado capilar</p>
+      <h1 class="text-4xl md:text-6xl ornate-serif font-bold leading-tight mb-5 drop-shadow-md">Todos los productos</h1>
+      <p class="text-base md:text-lg text-black/60 mt-4 max-w-3xl mx-auto">Catálogo completo de productos</p>
     </div>
   </header>
+  <section id="search-results-section" class="hidden py-12 bg-yellow-50 border-b border-gold-lux/10">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="mb-8">
+        <h2 class="text-3xl ornate-serif text-dark-royal mb-2">Resultados de búsqueda</h2>
+        <p id="search-results-summary" class="text-dark-royal/70"></p>
+      </div>
+      <div id="search-results-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+    </div>
+  </section>
   <section id="productos" class="py-16">
     <div class="max-w-7xl mx-auto px-6">
-      <div class="flex justify-end mb-6">
-        <label for="ordenar" class="mr-2 font-medium text-dark-royal">Ordenar por:</label>
-        <select id="ordenar" class="border rounded px-3 py-2 text-dark-royal" onchange="ordenarProductos()">
-          <option value="default">Por defecto</option>
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+        <div>
+          <h2 class="text-3xl ornate-serif text-dark-royal">Todos los productos</h2>
+          <p class="text-dark-royal/70 text-sm mt-1">Aquí se mantiene el catálogo completo.</p>
+        </div>
+        <div class="flex items-center">
+          <label for="ordenar" class="mr-2 font-medium text-dark-royal">Ordenar por:</label>
+          <select id="ordenar" class="border rounded px-3 py-2 text-dark-royal" onchange="ordenarProductos()">
+            <option value="default">Por defecto</option>
           <option value="precio-asc">Precio: menor a mayor</option>
           <option value="precio-desc">Precio: mayor a menor</option>
           <option value="nombre-asc">Nombre A-Z</option>
           <option value="nombre-desc">Nombre Z-A</option>
-        </select>
+          </select>
+        </div>
       </div>
       <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+      <!-- El modal de detalle de producto ahora es generado dinámicamente por main.js -->
     </div>
   </section>
+  <div id="cart-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center z-50">
+    <div class="bg-white w-full max-w-md mx-5 rounded-2xl overflow-hidden shadow-2xl lux-frame">
+      <div class="p-5 border-b flex justify-between items-center">
+        <h3 class="text-lg ornate-serif text-gold-lux">Tu Carrito</h3>
+        <button onclick="toggleCart()" class="text-3xl text-gray-500 hover:text-gray-800">×</button>
+      </div>
+      <div id="cart-items" class="p-5 max-h-[55vh] overflow-y-auto space-y-5"></div>
+      <div class="p-5 bg-gray-50 border-t">
+        <div class="flex justify-between text-lg font-semibold mb-5">
+          <span>Total</span>
+          <span id="cart-total" class="text-turquoise-jewel">$0</span>
+        </div>
+        <button onclick="checkout()" class="w-full btn-lux py-4 rounded-xl font-semibold">
+          Solicitar Cotización
+        </button>
+      </div>
+    </div>
+  </div>
  <footer class="bg-white text-dark-royal py-12">
     <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-10">
       <div>
@@ -147,49 +187,22 @@
     </div>
   </footer>
   <script src="../js/main.js"></script>
-<script>
-  function renderCategoriaCapilar() {
-    let productos = localStorage.getItem('products');
-    productos = productos ? JSON.parse(productos) : [];
-    let productosCat = productos.filter(p => p.category && p.category.toLowerCase() === 'cuidado capilar');
-    const orden = document.getElementById('ordenar')?.value;
-    if (orden === 'nombre-asc') {
-      productosCat = productosCat.sort((a, b) => a.name.localeCompare(b.name));
-    } else if (orden === 'nombre-desc') {
-      productosCat = productosCat.sort((a, b) => b.name.localeCompare(a.name));
-    } else if (orden === 'precio-asc') {
-      productosCat = productosCat.sort((a, b) => a.price - b.price);
-    } else if (orden === 'precio-desc') {
-      productosCat = productosCat.sort((a, b) => b.price - a.price);
+  <script>
+    function ordenarProductos() {
+      const criterio = document.getElementById('ordenar').value;
+      let productosOrdenados = [...products];
+      if (criterio === 'precio-asc') {
+        productosOrdenados.sort((a, b) => a.price - b.price);
+      } else if (criterio === 'precio-desc') {
+        productosOrdenados.sort((a, b) => b.price - a.price);
+      } else if (criterio === 'nombre-asc') {
+        productosOrdenados.sort((a, b) => a.name.localeCompare(b.name));
+      } else if (criterio === 'nombre-desc') {
+        productosOrdenados.sort((a, b) => b.name.localeCompare(a.name));
+      }
+      renderProducts('products-grid', productosOrdenados);
     }
-    const grid = document.getElementById('products-grid');
-    grid.innerHTML = '';
-    if (productosCat.length === 0) {
-      grid.innerHTML = '<p class="text-center text-gray-500 py-10">No hay productos disponibles.</p>';
-      return;
-    }
-    productosCat.forEach(p => {
-      const badge = p.discount ? `<span class=\"absolute top-3 right-3 bg-pomegranate text-white text-xs font-bold px-3 py-1 rounded-full shadow lux-frame\">-${p.discount}%</span>` : '';
-      const card = document.createElement('div');
-      card.className = 'product-card relative';
-      card.innerHTML = `
-        <img src="${p.img}" class="w-full h-60 object-cover" alt="${p.name}">
-        ${badge}
-        <div class="p-5">
-          <h3 class="text-lg ornate-serif font-semibold mb-2 text-gold-lux">${p.name}</h3>
-          <div class="text-xl font-bold text-turquoise-jewel mb-3">$${p.price.toLocaleString('es-CL')}</div>
-          <button onclick=\"addToCart(${p.id})\" class=\"w-full py-3 bg-gold-lux/10 hover:bg-gold-lux/25 text-gold-lux border border-gold-lux/30 rounded-lg font-medium transition text-sm\">
-            + Agregar
-          </button>
-        </div>
-      `;
-      grid.appendChild(card);
-    });
-  }
-  document.addEventListener('DOMContentLoaded', function() {
-    renderCategoriaCapilar();
-    document.getElementById('ordenar').addEventListener('change', renderCategoriaCapilar);
-  });
-</script>
+    window.renderProducts('products-grid');
+  </script>
 </body>
 </html>
