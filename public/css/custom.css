@@ -289,6 +289,59 @@ form[onsubmit*='buscarProductos'] button[type='submit']:hover {
   }
 
   #product-detail-content {
-    padding: 2.75rem 0.875rem 0.875rem;
+    padding: 2.75rem 0.75rem 0.75rem;
+  }
+
+  .product-detail-layout {
+    gap: 0.75rem;
+  }
+
+  .product-detail-image-frame {
+    max-width: 118px !important;
+    padding: 0.5rem !important;
+  }
+
+  .product-detail-title {
+    font-size: 1rem;
+    line-height: 1.2;
+    margin-bottom: 0.35rem;
+  }
+
+  .product-detail-price {
+    font-size: 0.95rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .product-detail-stock,
+  .product-detail-label,
+  .product-detail-qty label {
+    font-size: 0.85rem;
+  }
+
+  .product-detail-stepper {
+    width: 112px !important;
+    padding: 0.45rem 0.5rem !important;
+  }
+
+  .product-detail-description-box {
+    max-height: 72px !important;
+    min-height: 0 !important;
+    font-size: 0.9rem;
+    line-height: 1.35;
+  }
+
+  .product-detail-actions {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    padding-top: 0.75rem;
+    padding-bottom: 0.1rem;
+    margin-top: 0.75rem;
+  }
+
+  .product-detail-actions button {
+    padding-top: 0.7rem !important;
+    padding-bottom: 0.7rem !important;
+    font-size: 0.9rem !important;
   }
 }

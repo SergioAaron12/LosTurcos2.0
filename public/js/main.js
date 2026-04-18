@@ -849,32 +849,32 @@ function showProductDetailModal(id) {
   const hasLongDescription = detailText.length > 220;
   const descriptionHint = hasLongDescription ? '<div class="text-xs text-gray-400 mb-1">Desliza para leer más</div>' : '';
     const descriptionClass = hasLongDescription
-      ? 'text-gray-800 text-xs md:text-sm max-h-24 md:h-32 overflow-y-auto pr-2 text-left w-full rounded-lg border border-gray-100 bg-gray-50 p-2.5 md:p-3'
-      : 'text-gray-800 text-xs md:text-sm text-left w-full min-h-[5rem] md:min-h-[6rem] rounded-lg border border-gray-100 bg-gray-50 p-2.5 md:p-3';
+        ? 'product-detail-description-box text-gray-800 text-xs md:text-sm max-h-20 md:h-32 overflow-y-auto pr-2 text-left w-full rounded-lg border border-gray-100 bg-gray-50 p-2.5 md:p-3'
+        : 'product-detail-description-box text-gray-800 text-xs md:text-sm text-left w-full min-h-[4.25rem] md:min-h-[6rem] rounded-lg border border-gray-100 bg-gray-50 p-2.5 md:p-3';
   content.innerHTML = `
-    <div class="flex flex-col md:flex-row gap-4 md:gap-6 items-start md:h-full md:max-h-[calc(90vh-3.5rem)] overflow-visible md:overflow-hidden">
-      <div class="flex flex-col items-center text-center w-full md:w-[220px] md:flex-shrink-0">
-          <div class="w-full max-w-[160px] md:max-w-[220px] aspect-square rounded-2xl shadow border border-gray-100 bg-white p-2.5 md:p-3 flex items-center justify-center">
+      <div class="product-detail-layout flex flex-col md:flex-row gap-3 md:gap-6 items-start md:h-full md:max-h-[calc(90vh-3.5rem)] overflow-visible md:overflow-hidden">
+        <div class="product-detail-media flex flex-col items-center text-center w-full md:w-[220px] md:flex-shrink-0">
+            <div class="product-detail-image-frame w-full max-w-[136px] md:max-w-[220px] aspect-square rounded-2xl shadow border border-gray-100 bg-white p-2 md:p-3 flex items-center justify-center">
           <img src="${product.img}" alt="${product.name}" class="w-full h-full object-contain rounded-xl">
         </div>
       </div>
-      <div class="flex flex-col min-w-0 flex-1 w-full md:h-full md:overflow-hidden">
-          <div class="text-lg md:text-xl text-gold-lux font-semibold mb-1.5 md:mb-2 leading-tight text-center md:text-left pr-8">${product.name}</div>
-          <div class="text-sm md:text-base text-gray-700 mb-1.5 md:mb-2 text-center md:text-left">Precio habitual: ${getProductPriceMarkup(product)}</div>
-          <div class="text-xs md:text-sm text-gray-500 mb-3 md:mb-4 text-center md:text-left">Stock disponible: <span class="font-semibold text-dark-royal">${stock}</span></div>
-          <div class="mb-3 md:mb-4 flex flex-col items-center md:items-start gap-1.5 md:gap-2">
-            <label class="text-xs md:text-sm text-gray-700">Cantidad</label>
-            <div class="flex items-center border rounded-lg px-2.5 md:px-3 py-2.5 md:py-3 bg-gray-50" style="width: 128px;">
+        <div class="product-detail-main flex flex-col min-w-0 flex-1 w-full md:h-full md:overflow-hidden">
+            <div class="product-detail-title text-base md:text-xl text-gold-lux font-semibold mb-1 md:mb-2 leading-tight text-center md:text-left pr-8">${product.name}</div>
+            <div class="product-detail-price text-sm md:text-base text-gray-700 mb-1 md:mb-2 text-center md:text-left">Precio habitual: ${getProductPriceMarkup(product)}</div>
+            <div class="product-detail-stock text-xs md:text-sm text-gray-500 mb-2 md:mb-4 text-center md:text-left">Stock disponible: <span class="font-semibold text-dark-royal">${stock}</span></div>
+            <div class="product-detail-qty mb-2 md:mb-4 flex flex-col items-center md:items-start gap-1 md:gap-2">
+              <label class="text-xs md:text-sm text-gray-700">Cantidad</label>
+              <div class="product-detail-stepper flex items-center border rounded-lg px-2 md:px-3 py-2 md:py-3 bg-gray-50" style="width: 120px;">
               <button type="button" id="btn-restar" class="text-lg md:text-xl px-2.5 md:px-3 text-gray-500 hover:text-dark-royal" tabindex="-1">−</button>
               <input id="modal-cantidad" type="number" min="1" max="${stock}" value="${stock > 0 ? 1 : 0}" class="w-10 md:w-11 px-1 py-0.5 border-0 bg-transparent text-center text-base md:text-lg font-semibold outline-none" readonly />
               <button type="button" id="btn-sumar" class="text-lg md:text-xl px-2.5 md:px-3 text-gray-500 hover:text-dark-royal" tabindex="-1">+</button>
           </div>
           <div id="stock-msg" class="text-xs text-red-600 mt-1" style="display:none"></div>
         </div>
-          <div class="text-xs md:text-sm text-gray-600 mb-1.5 md:mb-2 text-center md:text-left">Descripción:</div>
+            <div class="product-detail-label text-xs md:text-sm text-gray-600 mb-1 md:mb-2 text-center md:text-left">Descripción:</div>
         ${descriptionHint}
         <div class="${descriptionClass}">${detailText}</div>
-          <div class="flex flex-col sm:flex-row gap-2.5 md:gap-3 w-full mt-3 md:mt-4 pt-3 md:pt-4 border-t border-gray-100">
+            <div class="product-detail-actions flex flex-col sm:flex-row gap-2 md:gap-3 w-full mt-2 md:mt-4 pt-2 md:pt-4 border-t border-gray-100">
             <button ${stock <= 0 ? 'disabled' : ''} onclick="addModalToCart(${product.id})" class="flex-1 py-2.5 md:py-3 text-sm md:text-base btn-lux rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed">Agregar al carrito</button>
             <button ${stock <= 0 ? 'disabled' : ''} onclick="addModalToCart(${product.id}, true)" class="flex-1 py-2.5 md:py-3 text-sm md:text-base btn-lux rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed">Comprar ahora</button>
         </div>
