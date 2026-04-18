@@ -8,8 +8,53 @@ const FIREBASE_CONFIG = {
 };
 
 const FIRESTORE_PRODUCTS_COLLECTION = 'products';
+const ASEO_SUBCATEGORY_GROUPS = [
+  {
+    title: 'Accesorios de Limpieza',
+    items: ['Bolsas de Basura', 'Escobas y Traperos', 'Guantes, Esponjas y Paños', 'Limpiadores de Calzado', 'Scrub Daddy', 'Otros']
+  },
+  {
+    title: 'Aerosoles y Desinfectantes',
+    items: ['Cloros', 'Desodorantes Ambientales', 'Insecticidas', 'Toallas Desinfectantes', 'Otros']
+  }
+];
+const ASEO_SUBCATEGORY_OPTIONS = [...new Set(ASEO_SUBCATEGORY_GROUPS.flatMap(group => group.items).concat('The Pink Stuff'))];
 let firebaseAppReadyPromise = null;
 let remoteProductsHydrationPromise = null;
+
+function normalizeTextValue(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function getCanonicalAseoSubcategory(value) {
+  const normalizedValue = normalizeTextValue(value);
+  return ASEO_SUBCATEGORY_OPTIONS.find(option => normalizeTextValue(option) === normalizedValue) || '';
+}
+
+function normalizeAseoSubcategory(category, subcategory) {
+  const categoryName = normalizeTextValue(category);
+  if (categoryName === 'the pink stuff') {
+    return 'The Pink Stuff';
+  }
+
+  if (categoryName !== 'aseo') {
+    return '';
+  }
+
+  return getCanonicalAseoSubcategory(subcategory) || 'Otros';
+}
+
+function getProductCategoryLabel(product) {
+  const categoryName = product.category || '';
+  const categoryNormalized = normalizeTextValue(categoryName);
+  const subcategoryName = normalizeAseoSubcategory(categoryName, product.subcategory);
+
+  if (categoryNormalized === 'aseo' && subcategoryName) {
+    return `Aseo / ${subcategoryName}`;
+  }
+
+  return categoryName || 'Sin categoria';
+}
 
 function loadFirebaseScript(src) {
   return new Promise((resolve, reject) => {
@@ -59,12 +104,14 @@ function initFirebaseApp() {
 
 function normalizeProduct(product) {
   const legacyShowcase = product.showcase || 'index';
+  const category = product.category || '';
   return {
     id: Number(product.id),
     name: product.name || '',
     price: Number(product.price) || 0,
     stock: Number(product.stock) || 0,
-    category: product.category || '',
+    category,
+    subcategory: normalizeAseoSubcategory(category, product.subcategory),
     discount: Number(product.discount) || 0,
     img: product.img || '',
     details: product.details || '',
@@ -314,7 +361,7 @@ function renderSearchSuggestions() {
       ? `<span class="text-xs text-gray-400 line-through mr-2">$${product.price.toLocaleString('es-CL')}</span><span class="font-semibold text-turquoise-jewel">$${discountedPrice.toLocaleString('es-CL')}</span>`
       : `<span class="font-semibold text-turquoise-jewel">$${product.price.toLocaleString('es-CL')}</span>`;
 
-    return `<button type="button" class="search-suggestion-item w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition border-b border-gray-100 last:border-b-0" data-index="${index}" data-product-id="${product.id}"><img src="${product.img}" alt="${product.name}" class="w-12 h-12 rounded-lg object-cover bg-gray-50" /><span class="flex-1 min-w-0"><span class="block text-sm font-semibold text-dark-royal truncate">${product.name}</span><span class="block text-xs text-gray-500 truncate">${product.category || 'Sin categoría'}</span></span><span class="text-sm whitespace-nowrap">${priceMarkup}</span></button>`;
+    return `<button type="button" class="search-suggestion-item w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition border-b border-gray-100 last:border-b-0" data-index="${index}" data-product-id="${product.id}"><img src="${product.img}" alt="${product.name}" class="w-12 h-12 rounded-lg object-cover bg-gray-50" /><span class="flex-1 min-w-0"><span class="block text-sm font-semibold text-dark-royal truncate">${product.name}</span><span class="block text-xs text-gray-500 truncate">${getProductCategoryLabel(product)}</span></span><span class="text-sm whitespace-nowrap">${priceMarkup}</span></button>`;
   }).join('');
 
   container.classList.remove('hidden');
@@ -553,7 +600,7 @@ function renderAdminProducts() {
         <div class="font-bold">${p.name}</div>
         <div>Stock: <span id="stock-${p.id}">${p.stock || 0}</span></div>
         <div>Precio: $${p.price.toLocaleString('es-CL')}</div>
-        <div>Categoría: ${p.category || ''}</div>
+        <div>Categoría: ${getProductCategoryLabel(p)}</div>
         <div>Descuento: ${p.discount || 0}%</div>
       </div>
       <button onclick="editProduct(${p.id})" class="px-2 py-1 bg-blue-500 text-white rounded">Editar</button>
@@ -561,6 +608,32 @@ function renderAdminProducts() {
     `;
     grid.appendChild(card);
   });
+}
+
+function populateAseoSubcategorySelect() {
+  const select = document.getElementById('product-subcategory');
+  if (!select) return;
+
+  const options = ['<option value="">Selecciona un catálogo de Aseo</option>']
+    .concat(ASEO_SUBCATEGORY_OPTIONS.map(option => `<option value="${option}">${option}</option>`));
+  select.innerHTML = options.join('');
+}
+
+function updateAdminSubcategoryField(selectedValue = '') {
+  const wrapper = document.getElementById('product-subcategory-wrapper');
+  const select = document.getElementById('product-subcategory');
+  const categorySelect = document.getElementById('product-category');
+  if (!wrapper || !select || !categorySelect) return;
+
+  if (!select.options.length || select.options.length === 1) {
+    populateAseoSubcategorySelect();
+  }
+
+  const isAseoCategory = normalizeTextValue(categorySelect.value) === 'aseo';
+  wrapper.classList.toggle('hidden', !isAseoCategory);
+  select.disabled = !isAseoCategory;
+  select.required = isAseoCategory;
+  select.value = isAseoCategory ? (getCanonicalAseoSubcategory(selectedValue) || 'Otros') : '';
 }
 
 function showProductForm(editId = null) {
@@ -574,6 +647,7 @@ function showProductForm(editId = null) {
     document.getElementById('product-category').value = prod.category || '';
     document.getElementById('product-discount').value = prod.discount || 0;
     document.getElementById('product-img').value = prod.img;
+    updateAdminSubcategoryField(prod.subcategory || '');
   } else {
     document.getElementById('product-id').value = '';
     document.getElementById('product-name').value = '';
@@ -582,6 +656,7 @@ function showProductForm(editId = null) {
     document.getElementById('product-category').value = '';
     document.getElementById('product-discount').value = '';
     document.getElementById('product-img').value = '';
+    updateAdminSubcategoryField('');
   }
 }
 
@@ -600,18 +675,19 @@ document.addEventListener('DOMContentLoaded', function() {
       const price = parseInt(document.getElementById('product-price').value);
       const stock = parseInt(document.getElementById('product-stock').value);
       const category = document.getElementById('product-category').value;
+      const subcategory = normalizeAseoSubcategory(category, document.getElementById('product-subcategory')?.value);
       const discount = parseInt(document.getElementById('product-discount').value) || 0;
       const img = document.getElementById('product-img').value;
       if (id) {
         // Editar
         const idx = products.findIndex(p => p.id == id);
         if (idx > -1) {
-          products[idx] = stampProductUpdate({ ...products[idx], name, price, stock, category, discount, img });
+          products[idx] = stampProductUpdate({ ...products[idx], name, price, stock, category, subcategory, discount, img });
         }
       } else {
         // Nuevo
         const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
-        products.push(stampProductUpdate({ id: newId, name, price, stock, category, discount, img }));
+        products.push(stampProductUpdate({ id: newId, name, price, stock, category, subcategory, discount, img }));
       }
       saveProducts();
       hideProductForm();
@@ -637,10 +713,98 @@ function deleteProduct(id) {
   }
 }
 let selectedCategory = 'Todos';
+let selectedSubcategory = '';
 
-function filterByCategory(category) {
+function productMatchesCurrentFilters(product) {
+  const selectedCategoryName = normalizeTextValue(selectedCategory);
+  const selectedSubcategoryName = normalizeTextValue(selectedSubcategory);
+  const productCategoryName = normalizeTextValue(product.category);
+  const productSubcategoryName = normalizeTextValue(normalizeAseoSubcategory(product.category, product.subcategory));
+
+  if (!selectedCategoryName || selectedCategoryName === 'todos') {
+    return true;
+  }
+
+  if (selectedCategoryName === 'aseo') {
+    if (selectedSubcategoryName === 'the pink stuff') {
+      return productCategoryName === 'the pink stuff' || productSubcategoryName === 'the pink stuff';
+    }
+
+    if (productCategoryName !== 'aseo') {
+      return false;
+    }
+
+    return !selectedSubcategoryName || productSubcategoryName === selectedSubcategoryName;
+  }
+
+  if (selectedCategoryName === 'the pink stuff') {
+    return productCategoryName === 'the pink stuff' || productSubcategoryName === 'the pink stuff';
+  }
+
+  return productCategoryName === selectedCategoryName;
+}
+
+function updateAseoCatalogState() {
+  const panel = document.getElementById('aseo-catalog-panel');
+  if (!panel) return;
+
+  const currentSubcategory = normalizeTextValue(selectedSubcategory);
+  panel.querySelectorAll('[data-aseo-subcategory]').forEach(button => {
+    const buttonSubcategory = normalizeTextValue(button.dataset.aseoSubcategory || '');
+    const isActive = buttonSubcategory === currentSubcategory;
+    button.classList.toggle('aseo-catalog-link--active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+
+  panel.querySelectorAll('.aseo-catalog-group').forEach(group => {
+    if (!currentSubcategory) return;
+    const containsSelected = Array.from(group.querySelectorAll('[data-aseo-subcategory]')).some(button => normalizeTextValue(button.dataset.aseoSubcategory || '') === currentSubcategory);
+    if (containsSelected) {
+      group.open = true;
+    }
+  });
+
+  const title = document.getElementById('aseo-catalog-current');
+  if (title) {
+    title.textContent = selectedSubcategory ? `Catálogo: ${selectedSubcategory}` : 'Todos los catálogos de Aseo';
+  }
+}
+
+function syncAseoCatalogParam() {
+  const pageName = window.location.pathname.split('/').pop();
+  if (pageName !== 'aseo.html') return;
+
+  const params = new URLSearchParams(window.location.search);
+  if (selectedSubcategory) {
+    params.set('catalogo', selectedSubcategory);
+  } else {
+    params.delete('catalogo');
+  }
+
+  const target = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+  window.history.replaceState(null, '', target);
+}
+
+function initAseoCatalogPanel() {
+  const panel = document.getElementById('aseo-catalog-panel');
+  if (!panel || panel.dataset.bound === 'true') return;
+
+  panel.dataset.bound = 'true';
+  panel.querySelectorAll('[data-aseo-subcategory]').forEach(button => {
+    button.addEventListener('click', () => {
+      filterByCategory('Aseo', button.dataset.aseoSubcategory || '');
+      syncAseoCatalogParam();
+    });
+  });
+
+  updateAseoCatalogState();
+}
+
+function filterByCategory(category, subcategory = '') {
   selectedCategory = category;
+  selectedSubcategory = category === 'Aseo' ? getCanonicalAseoSubcategory(subcategory) || '' : '';
   renderProducts('products-grid');
+  updateAseoCatalogState();
 }
 
 
@@ -885,9 +1049,8 @@ function renderProducts(containerId, listOrOnlyDiscount = false) {
   const externalList = Array.isArray(listOrOnlyDiscount) ? listOrOnlyDiscount : null;
   grid.innerHTML = '';
   let filtered = externalList || (onlyDiscount ? products.filter(p => p.discount > 0) : products);
-  if (!externalList && selectedCategory !== 'Todos') {
-    const catNorm = selectedCategory.trim().toLowerCase();
-    filtered = filtered.filter(p => (p.category || '').trim().toLowerCase() === catNorm);
+  if (!externalList) {
+    filtered = filtered.filter(productMatchesCurrentFilters);
   }
 
   const counter = document.getElementById('productos-encontrados');
@@ -1222,6 +1385,9 @@ document.addEventListener('DOMContentLoaded', async function() {
   ensureSuccessToast();
   ensureCartModal();
   ensureProductDetailModal();
+  populateAseoSubcategorySelect();
+  document.getElementById('product-category')?.addEventListener('change', () => updateAdminSubcategoryField());
+  updateAdminSubcategoryField();
   initSearchSuggestions();
   initFooterWhatsAppButtons();
   initHomePage();
@@ -1247,6 +1413,7 @@ function applySortCriteria(list, criterion) {
 
 function initCategoryPage() {
   const pageName = window.location.pathname.split('/').pop();
+  const params = new URLSearchParams(window.location.search);
   const categoryMap = {
     'adulto-mayor.html': 'Cuidado Adulto',
     'aseo.html': 'Aseo',
@@ -1269,7 +1436,12 @@ function initCategoryPage() {
   };
 
   if (pageName === 'todos.html') {
+    selectedCategory = 'Todos';
+    selectedSubcategory = '';
     renderAllProductsSection();
+  } else if (pageName === 'aseo.html') {
+    initAseoCatalogPanel();
+    filterByCategory('Aseo', getCanonicalAseoSubcategory(params.get('catalogo') || '') || '');
   } else if (categoryMap[pageName]) {
     filterByCategory(categoryMap[pageName]);
   } else {
@@ -1287,11 +1459,7 @@ function initCategoryPage() {
     }
 
     syncProductsFromStorage();
-    let list = [...products];
-    if (categoryMap[pageName]) {
-      const categoryName = categoryMap[pageName].trim().toLowerCase();
-      list = list.filter(p => (p.category || '').trim().toLowerCase() === categoryName);
-    }
+    let list = [...products].filter(productMatchesCurrentFilters);
     renderProducts('products-grid', applySortCriteria(list, sortSelect.value));
   });
 }

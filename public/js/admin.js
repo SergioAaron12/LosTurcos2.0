@@ -8,7 +8,52 @@ const FIREBASE_CONFIG = {
 };
 
 const FIRESTORE_PRODUCTS_COLLECTION = 'products';
+const ASEO_SUBCATEGORY_GROUPS = [
+  {
+    title: 'Accesorios de Limpieza',
+    items: ['Bolsas de Basura', 'Escobas y Traperos', 'Guantes, Esponjas y Paños', 'Limpiadores de Calzado', 'Scrub Daddy', 'Otros']
+  },
+  {
+    title: 'Aerosoles y Desinfectantes',
+    items: ['Cloros', 'Desodorantes Ambientales', 'Insecticidas', 'Toallas Desinfectantes', 'Otros']
+  }
+];
+const ASEO_SUBCATEGORY_OPTIONS = [...new Set(ASEO_SUBCATEGORY_GROUPS.flatMap(group => group.items).concat('The Pink Stuff'))];
 let firebaseAppReadyPromise = null;
+
+function normalizeTextValue(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function getCanonicalAseoSubcategory(value) {
+  const normalizedValue = normalizeTextValue(value);
+  return ASEO_SUBCATEGORY_OPTIONS.find(option => normalizeTextValue(option) === normalizedValue) || '';
+}
+
+function normalizeAseoSubcategory(category, subcategory) {
+  const categoryName = normalizeTextValue(category);
+  if (categoryName === 'the pink stuff') {
+    return 'The Pink Stuff';
+  }
+
+  if (categoryName !== 'aseo') {
+    return '';
+  }
+
+  return getCanonicalAseoSubcategory(subcategory) || 'Otros';
+}
+
+function getProductCategoryLabel(product) {
+  const categoryName = product.category || '';
+  const categoryNormalized = normalizeTextValue(categoryName);
+  const subcategoryName = normalizeAseoSubcategory(categoryName, product.subcategory);
+
+  if (categoryNormalized === 'aseo' && subcategoryName) {
+    return `Aseo / ${subcategoryName}`;
+  }
+
+  return categoryName || 'Sin categoria';
+}
 
 function loadFirebaseScript(src) {
   return new Promise((resolve, reject) => {
@@ -58,12 +103,14 @@ function initFirebaseApp() {
 
 function normalizeProduct(product) {
   const legacyShowcase = product.showcase || 'index';
+  const category = product.category || '';
   return {
     id: Number(product.id),
     name: product.name || '',
     price: Number(product.price) || 0,
     stock: Number(product.stock) || 0,
-    category: product.category || '',
+    category,
+    subcategory: normalizeAseoSubcategory(category, product.subcategory),
     discount: Number(product.discount) || 0,
     img: product.img || '',
     details: product.details || '',
@@ -240,7 +287,7 @@ function renderAdminProducts() {
         <div class="font-bold">${p.name}</div>
         <div>Stock: ${stockStatus}</div>
         <div>Precio: $${p.price.toLocaleString('es-CL')}</div>
-        <div>Categoría: ${p.category || ''}</div>
+        <div>Categoría: ${getProductCategoryLabel(p)}</div>
         <div>Descuento: ${p.discount || 0}%</div>
         <div>Se muestra en: ${visibility}</div>
       </div>
@@ -249,6 +296,32 @@ function renderAdminProducts() {
     `;
     grid.appendChild(card);
   });
+}
+
+function populateAseoSubcategorySelect() {
+  const select = document.getElementById('product-subcategory');
+  if (!select) return;
+
+  const options = ['<option value="">Selecciona un catálogo de Aseo</option>']
+    .concat(ASEO_SUBCATEGORY_OPTIONS.map(option => `<option value="${option}">${option}</option>`));
+  select.innerHTML = options.join('');
+}
+
+function updateAdminSubcategoryField(selectedValue = '') {
+  const wrapper = document.getElementById('product-subcategory-wrapper');
+  const select = document.getElementById('product-subcategory');
+  const categorySelect = document.getElementById('product-category');
+  if (!wrapper || !select || !categorySelect) return;
+
+  if (!select.options.length || select.options.length === 1) {
+    populateAseoSubcategorySelect();
+  }
+
+  const isAseoCategory = normalizeTextValue(categorySelect.value) === 'aseo';
+  wrapper.classList.toggle('hidden', !isAseoCategory);
+  select.disabled = !isAseoCategory;
+  select.required = isAseoCategory;
+  select.value = isAseoCategory ? (getCanonicalAseoSubcategory(selectedValue) || 'Otros') : '';
 }
 
 function resetForm() {
@@ -261,6 +334,7 @@ function resetForm() {
   document.getElementById('product-img').value = '';
   document.getElementById('product-details').value = '';
   document.getElementById('product-img-file').value = '';
+  updateAdminSubcategoryField('');
   const showInOffers = document.getElementById('product-show-in-offers');
   const showInNew = document.getElementById('product-show-in-new');
   if (showInOffers) showInOffers.checked = false;
@@ -279,6 +353,7 @@ function editProduct(id) {
   document.getElementById('product-img').value = prod.img;
   document.getElementById('product-details').value = prod.details || '';
   document.getElementById('product-img-file').value = '';
+  updateAdminSubcategoryField(prod.subcategory || '');
   const showInOffers = document.getElementById('product-show-in-offers');
   const showInNew = document.getElementById('product-show-in-new');
   if (showInOffers) showInOffers.checked = flags.showInOffers;
@@ -305,6 +380,7 @@ document.getElementById('product-form').onsubmit = function(e) {
   const stockValue = document.getElementById('product-stock').value.trim();
   const stock = Number.parseInt(stockValue, 10);
   const category = document.getElementById('product-category').value;
+  const subcategory = normalizeAseoSubcategory(category, document.getElementById('product-subcategory')?.value);
   const discount = parseInt(document.getElementById('product-discount').value) || 0;
   const details = document.getElementById('product-details').value;
   let img = document.getElementById('product-img').value;
@@ -333,12 +409,12 @@ document.getElementById('product-form').onsubmit = function(e) {
       // Editar
       const idx = products.findIndex(p => p.id == id);
       if (idx > -1) {
-        products[idx] = stampProductUpdate({ ...products[idx], name, price, stock, category, discount, img, details, showcase: 'index', showInOffers, showInNew }, updatedAt);
+        products[idx] = stampProductUpdate({ ...products[idx], name, price, stock, category, subcategory, discount, img, details, showcase: 'index', showInOffers, showInNew }, updatedAt);
       }
     } else {
       // Nuevo
       const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
-      products.push(stampProductUpdate({ id: newId, name, price, stock, category, discount, img, details, showcase: 'index', showInOffers, showInNew }, updatedAt));
+      products.push(stampProductUpdate({ id: newId, name, price, stock, category, subcategory, discount, img, details, showcase: 'index', showInOffers, showInNew }, updatedAt));
     }
     saveProducts();
     showAdminPanel();
@@ -349,6 +425,10 @@ document.getElementById('product-form').onsubmit = function(e) {
 
 document.addEventListener('DOMContentLoaded', async function() {
   await hydrateProductsFromFirestore();
+
+  populateAseoSubcategorySelect();
+  document.getElementById('product-category')?.addEventListener('change', () => updateAdminSubcategoryField());
+  updateAdminSubcategoryField();
 
   document.getElementById('logout-btn').addEventListener('click', function(e) {
     e.preventDefault();
