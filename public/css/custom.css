@@ -187,6 +187,48 @@ form[onsubmit*='buscarProductos'] button[type='submit']:hover {
   border: 1px solid rgba(184, 134, 11, 0.35);
 }
 
+.cart-modal-shell {
+  padding: 1rem;
+}
+
+.cart-modal-panel {
+  width: min(100%, 32rem);
+  max-height: calc(100vh - 2rem);
+  border-radius: 1.25rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.cart-modal-close {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  z-index: 2;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 6px 18px rgba(15, 28, 63, 0.12);
+}
+
+.cart-modal-close:hover {
+  color: #b91c1c;
+}
+
+.cart-modal-header,
+.cart-modal-summary {
+  flex-shrink: 0;
+}
+
+.cart-modal-items {
+  flex: 1;
+  min-height: 0;
+}
+
 #cart-modal button[onclick='checkout()']:hover {
   background: #ffd54f !important;
 }
@@ -350,6 +392,56 @@ form[onsubmit*='buscarProductos'] button[type='submit']:hover {
     min-height: 1.85rem;
     padding: 0.3rem 0.75rem;
     font-size: 0.8rem;
+  }
+
+  .cart-modal-shell {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .cart-modal-panel {
+    width: 100%;
+    max-width: none;
+    max-height: min(86vh, calc(100vh - 0.5rem));
+    border-radius: 1.5rem 1.5rem 0 0;
+    margin: 0;
+  }
+
+  .cart-modal-close {
+    top: 0.8rem;
+    right: 0.8rem;
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .cart-modal-header {
+    padding: 1.25rem 1.25rem 1rem;
+    padding-right: 3.25rem;
+  }
+
+  .cart-modal-header h2 {
+    font-size: 1.05rem;
+    line-height: 1.25;
+  }
+
+  .cart-modal-items {
+    padding: 1rem 1.25rem;
+    max-height: calc(86vh - 15rem) !important;
+  }
+
+  .cart-modal-summary {
+    padding: 1rem 1.25rem 1.25rem;
+    border-top: 1px solid rgba(229, 231, 235, 1);
+  }
+
+  .cart-modal-summary > div {
+    align-items: flex-start;
+  }
+
+  .cart-modal-summary button {
+    min-height: 3.5rem;
+    font-size: 1rem;
+    border-radius: 0.9rem;
   }
 
   #cart-items li {

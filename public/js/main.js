@@ -680,15 +680,15 @@ function ensureCartModal() {
 
   modal = document.createElement('div');
   modal.id = 'cart-modal';
-  modal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden';
+  modal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden cart-modal-shell';
   modal.innerHTML = `
-    <div class="bg-white rounded-lg shadow-lg w-full max-w-md relative overflow-hidden">
-      <button onclick="toggleCart()" class="absolute top-2 right-2 text-gray-500 hover:text-red-500"><i class="fa fa-times"></i></button>
-      <div class="p-6 border-b">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md relative overflow-hidden cart-modal-panel">
+      <button onclick="toggleCart()" class="cart-modal-close" aria-label="Cerrar carrito"><i class="fa fa-times"></i></button>
+      <div class="p-6 border-b cart-modal-header">
         <h2 class="text-xl font-bold">Carrito de Compras</h2>
       </div>
-      <div id="cart-items" class="p-6 max-h-[55vh] overflow-y-auto"></div>
-      <div class="p-6 bg-gray-50 border-t space-y-3">
+      <div id="cart-items" class="p-6 max-h-[55vh] overflow-y-auto cart-modal-items"></div>
+      <div class="p-6 bg-gray-50 border-t space-y-3 cart-modal-summary">
         <div class="flex items-center justify-between text-sm text-gray-600">
           <span>Subtotal</span>
           <span id="cart-subtotal">$0</span>
