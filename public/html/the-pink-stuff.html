@@ -156,36 +156,5 @@
     </div>
   </footer>
   <script src="../js/main.js"></script>
-<script>
-  function renderCategoriaPinkStuff() {
-    let productos = localStorage.getItem('products');
-    productos = productos ? JSON.parse(productos) : [];
-    let productosCat = productos.filter(p => p.category && p.category.toLowerCase() === 'the pink stuff');
-    const grid = document.getElementById('products-grid');
-    grid.innerHTML = '';
-    if (productosCat.length === 0) {
-      grid.innerHTML = '<p class="text-center text-gray-500 py-10">No hay productos disponibles.</p>';
-      return;
-    }
-    productosCat.forEach(p => {
-      const badge = p.discount ? `<span class=\"absolute top-3 right-3 bg-pomegranate text-white text-xs font-bold px-3 py-1 rounded-full shadow lux-frame\">-${p.discount}%</span>` : '';
-      const card = document.createElement('div');
-      card.className = 'product-card relative';
-      card.innerHTML = `
-        <img src="${p.img}" class="w-full h-60 object-cover" alt="${p.name}">
-        ${badge}
-        <div class="p-5">
-          <h3 class="text-lg ornate-serif font-semibold mb-2 text-gold-lux">${p.name}</h3>
-          <div class="text-xl font-bold text-turquoise-jewel mb-3">$${p.price.toLocaleString('es-CL')}</div>
-          <button onclick=\"addToCart(${p.id})\" class=\"w-full py-3 bg-gold-lux/10 hover:bg-gold-lux/25 text-gold-lux border border-gold-lux/30 rounded-lg font-medium transition text-sm\">
-            + Agregar
-          </button>
-        </div>
-      `;
-      grid.appendChild(card);
-    });
-  }
-  document.addEventListener('DOMContentLoaded', renderCategoriaPinkStuff);
-</script>
 </body>
 </html>

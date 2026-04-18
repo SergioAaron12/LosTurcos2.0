@@ -72,52 +72,6 @@
         </div>
         <div class="flex-1">
           <h4 class="text-dark-royal font-bold text-base md:text-lg">Tienda online</h4>
-          <p class="text-dark-royal/60 text-sm">Exclusiva RM</p>
-        </div>
-      </div>
-      <div class="flex items-center gap-4 border-r border-gray-400 px-8 py-2">
-        <div class="text-3xl text-gold-lux flex-shrink-0">
-          <i class="fa-solid fa-tag"></i>
-        </div>
-        <div class="flex-1">
-          <h4 class="text-dark-royal font-bold text-base md:text-lg">Precios por mayor</h4>
-          <p class="text-dark-royal/60 text-sm">Desde 2 o 3 unidades</p>
-        </div>
-      </div>
-      <div class="flex items-center gap-4 pl-8 py-2">
-        <div class="text-3xl text-gold-lux flex-shrink-0">
-          <i class="fa-solid fa-truck"></i>
-        </div>
-        <div class="flex-1">
-          <h4 class="text-dark-royal font-bold text-base md:text-lg">Despacho Gratis</h4>
-          <p class="text-dark-royal/60 text-sm">Compras sobre $50.000</p>
-        </div>
-      </div>
-    </div>
-  </div>
-  <header id="inicio" class="royal-bg min-h-[40vh] flex items-center relative pt-20 pb-10">
-    <div class="relative max-w-6xl mx-auto px-6 text-center text-black">
-      <h1 class="text-4xl md:text-6xl ornate-serif font-bold leading-tight mb-5 drop-shadow-md">Higiene y Cuidado Personal</h1>
-      <p class="text-base md:text-lg text-black/60 mt-4 max-w-3xl mx-auto">El verdadero bienestar comienza cuando decides ponerte en primer lugar. En nuestra sección de Cuidado Personal, creemos que tu rutina diaria no debe ser una simple obligación, sino un ritual de amor propio, salud y desconexión.</p>
-    </div>
-  </header>
-  <section id="productos" class="py-16">
-    <div class="max-w-7xl mx-auto px-6">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-        <div>
-          <h2 class="text-3xl ornate-serif text-dark-royal">Todos los productos</h2>
-          <p class="text-dark-royal/70 text-sm mt-1">Aquí se mantiene el catálogo completo.</p>
-        </div>
-        <div class="flex items-center">
-          <label for="ordenar" class="mr-2 font-medium text-dark-royal">Ordenar por:</label>
-          <select id="ordenar" class="border rounded px-3 py-2 text-dark-royal">
-            <option value="default">Por defecto</option>
-            <option value="precio-asc">Precio: menor a mayor</option>
-            <option value="precio-desc">Precio: mayor a menor</option>
-            <option value="nombre-asc">Nombre A-Z</option>
-            <option value="nombre-desc">Nombre Z-A</option>
-          </select>
-        </div>
       </div>
       <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
       <!-- El modal de detalle de producto ahora es generado dinámicamente por main.js -->
@@ -163,43 +117,5 @@
     </div>
   </footer>
   <script src="../js/main.js"></script>
-  <script>
-    function renderCategoriaPersonal() {
-      let productos = localStorage.getItem('products');
-      productos = productos ? JSON.parse(productos) : [];
-      let productosCat = productos.filter(p => p.category && p.category.toLowerCase() === 'cuidado personal');
-      const grid = document.getElementById('products-grid');
-      grid.innerHTML = '';
-      if (productosCat.length === 0) {
-        grid.innerHTML = '<p class="text-center text-gray-500 py-10">No hay productos disponibles.</p>';
-        return;
-      }
-      productosCat.forEach(p => {
-        const badge = p.discount ? `<span class=\"absolute top-3 right-3 bg-pomegranate text-white text-xs font-bold px-3 py-1 rounded-full shadow lux-frame\">-${p.discount}%</span>` : '';
-        const card = document.createElement('div');
-        card.className = 'product-card relative';
-        card.innerHTML = `
-          <img src="${p.img}" class="w-full h-60 object-cover" alt="${p.name}">
-          ${badge}
-          <div class="p-5">
-            <h3 class="text-lg ornate-serif font-semibold mb-2 text-gold-lux">${p.name}</h3>
-            <div class="text-xl font-bold text-turquoise-jewel mb-3">$${p.price.toLocaleString('es-CL')}</div>
-            <button onclick=\"addToCart(${p.id})\" class=\"w-full py-3 bg-gold-lux/10 hover:bg-gold-lux/25 text-gold-lux border border-gold-lux/30 rounded-lg font-medium transition text-sm\">
-              + Agregar
-            </button>
-          </div>
-        `;
-        grid.appendChild(card);
-      });
-    }
-    document.addEventListener('DOMContentLoaded', renderCategoriaPersonal);
-  </script>
-  <script>
-    // Cargar productos al iniciar la página
-    document.addEventListener('DOMContentLoaded', () => {
-      cargarProductos('Cuidado Personal');
-    });
-  </script>
-
 </body>
 </html>

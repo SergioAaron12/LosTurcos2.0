@@ -57,6 +57,7 @@ function initFirebaseApp() {
 }
 
 function normalizeProduct(product) {
+  const legacyShowcase = product.showcase || 'index';
   return {
     id: Number(product.id),
     name: product.name || '',
@@ -66,7 +67,17 @@ function normalizeProduct(product) {
     discount: Number(product.discount) || 0,
     img: product.img || '',
     details: product.details || '',
-    showcase: product.showcase || 'index'
+    showcase: legacyShowcase,
+    showInOffers: Boolean(product.showInOffers || legacyShowcase === 'ofertas'),
+    showInNew: Boolean(product.showInNew || legacyShowcase === 'nuevos')
+  };
+}
+
+function getProductDisplayFlags(product) {
+  const legacyShowcase = product.showcase || 'index';
+  return {
+    showInOffers: Boolean(product.showInOffers || legacyShowcase === 'ofertas'),
+    showInNew: Boolean(product.showInNew || legacyShowcase === 'nuevos')
   };
 }
 
@@ -189,6 +200,12 @@ function renderAdminProducts() {
     return;
   }
   products.forEach(p => {
+    const flags = getProductDisplayFlags(p);
+    const visibility = [
+      'Catalogo general',
+      flags.showInOffers ? 'Ofertas' : null,
+      flags.showInNew ? 'Nuevos' : null
+    ].filter(Boolean).join(' | ');
     const card = document.createElement('div');
     card.className = 'border p-3 rounded mb-2 flex items-center gap-3 bg-white shadow';
     card.innerHTML = `
@@ -199,6 +216,7 @@ function renderAdminProducts() {
         <div>Precio: $${p.price.toLocaleString('es-CL')}</div>
         <div>Categoría: ${p.category || ''}</div>
         <div>Descuento: ${p.discount || 0}%</div>
+        <div>Se muestra en: ${visibility}</div>
       </div>
       <button onclick="editProduct(${p.id})" class="px-2 py-1 bg-blue-500 text-white rounded">Editar</button>
       <button onclick="deleteProduct(${p.id})" class="px-2 py-1 bg-red-500 text-white rounded">Eliminar</button>
@@ -217,11 +235,15 @@ function resetForm() {
   document.getElementById('product-img').value = '';
   document.getElementById('product-details').value = '';
   document.getElementById('product-img-file').value = '';
-  if(document.getElementById('product-showcase')) document.getElementById('product-showcase').value = 'index';
+  const showInOffers = document.getElementById('product-show-in-offers');
+  const showInNew = document.getElementById('product-show-in-new');
+  if (showInOffers) showInOffers.checked = false;
+  if (showInNew) showInNew.checked = false;
 }
 
 function editProduct(id) {
   const prod = products.find(p => p.id === id);
+  const flags = getProductDisplayFlags(prod);
   document.getElementById('product-id').value = prod.id;
   document.getElementById('product-name').value = prod.name;
   document.getElementById('product-price').value = prod.price;
@@ -231,7 +253,10 @@ function editProduct(id) {
   document.getElementById('product-img').value = prod.img;
   document.getElementById('product-details').value = prod.details || '';
   document.getElementById('product-img-file').value = '';
-  if(document.getElementById('product-showcase')) document.getElementById('product-showcase').value = prod.showcase || 'index';
+  const showInOffers = document.getElementById('product-show-in-offers');
+  const showInNew = document.getElementById('product-show-in-new');
+  if (showInOffers) showInOffers.checked = flags.showInOffers;
+  if (showInNew) showInNew.checked = flags.showInNew;
 }
 
 function deleteProduct(id) {
@@ -257,7 +282,8 @@ document.getElementById('product-form').onsubmit = function(e) {
   const details = document.getElementById('product-details').value;
   let img = document.getElementById('product-img').value;
   const imgFile = document.getElementById('product-img-file').files[0];
-  const showcase = document.getElementById('product-showcase') ? document.getElementById('product-showcase').value : 'index';
+  const showInOffers = document.getElementById('product-show-in-offers')?.checked || false;
+  const showInNew = document.getElementById('product-show-in-new')?.checked || false;
   if (imgFile) {
     const reader = new FileReader();
     reader.onload = function(ev) {
@@ -273,12 +299,12 @@ document.getElementById('product-form').onsubmit = function(e) {
       // Editar
       const idx = products.findIndex(p => p.id == id);
       if (idx > -1) {
-        products[idx] = { ...products[idx], name, price, stock, category, discount, img, details, showcase };
+        products[idx] = { ...products[idx], name, price, stock, category, discount, img, details, showcase: 'index', showInOffers, showInNew };
       }
     } else {
       // Nuevo
       const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
-      products.push({ id: newId, name, price, stock, category, discount, img, details, showcase });
+      products.push({ id: newId, name, price, stock, category, discount, img, details, showcase: 'index', showInOffers, showInNew });
     }
     saveProducts();
     showAdminPanel();

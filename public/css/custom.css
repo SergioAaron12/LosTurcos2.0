@@ -58,6 +58,27 @@ body {
   transform: translateY(-8px);
   box-shadow: 0 16px 40px rgba(0,168,150,0.18);
 }
+.discount-badge {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.5rem;
+  min-height: 2rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 0.85rem 0.85rem 0.2rem 0.85rem;
+  border: 1px solid var(--turquoise-jewel);
+  background: linear-gradient(135deg, #ffcf1f 0%, #f4c542 100%);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 8px 18px rgba(15, 28, 63, 0.18);
+}
 .btn-lux {
   background: var(--gold-lux);
   color: var(--dark-royal);
@@ -271,6 +292,15 @@ form[onsubmit*='buscarProductos'] button[type='submit']:hover {
 
   .product-card:hover {
     transform: none;
+  }
+
+  .discount-badge {
+    top: 0.75rem;
+    right: 0.75rem;
+    min-width: 4rem;
+    min-height: 1.85rem;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.85rem;
   }
 
   #cart-items li {

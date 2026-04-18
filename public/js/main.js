@@ -850,7 +850,7 @@ function renderProducts(containerId, listOrOnlyDiscount = false) {
       ? 'w-full h-41 object-contain bg-white p-3'
       : 'w-full h-60 object-cover';
     const badge = p.discount ? 
-      `<span class="absolute top-3 right-3 bg-pomegranate text-white text-xs font-bold px-3 py-1 rounded-full shadow lux-frame">-${p.discount}%</span>` : '';
+      `<span class="discount-badge">-${p.discount}%</span>` : '';
     const quickAddButton = showQuickAdd
       ? `<button class="w-full py-3 btn-lux rounded-lg font-medium transition text-sm add-product-btn" data-id="${p.id}">+ Agregar</button>`
       : '';
