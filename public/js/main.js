@@ -645,16 +645,45 @@ function filterByCategory(category) {
 
 
 function ensureSuccessToast() {
-  let toast = document.getElementById('success-toast');
+  let toast = document.getElementById('app-toast');
   if (toast) return toast;
 
   toast = document.createElement('div');
-  toast.id = 'success-toast';
+  toast.id = 'app-toast';
   toast.style.display = 'none';
-  toast.className = 'fixed top-8 left-1/2 -translate-x-1/2 z-[9999] bg-green-500 text-black px-6 py-3 rounded-lg shadow-lg text-lg font-semibold transition-all duration-300';
-  toast.textContent = 'Agregado con éxito';
+  toast.setAttribute('aria-live', 'polite');
+  toast.setAttribute('role', 'status');
+  toast.className = 'app-toast';
+  toast.innerHTML = '<div class="app-toast__card"><div class="app-toast__icon" aria-hidden="true"></div><div class="app-toast__message">Agregado con exito</div></div>';
   document.body.appendChild(toast);
   return toast;
+}
+
+function showAppToast(message, type = 'success', duration = 2000) {
+  const toast = ensureSuccessToast();
+  const messageElement = toast.querySelector('.app-toast__message');
+
+  toast.classList.remove('app-toast--success', 'app-toast--error', 'app-toast--visible');
+  toast.classList.add(type === 'error' ? 'app-toast--error' : 'app-toast--success');
+
+  if (messageElement) {
+    messageElement.textContent = message;
+  }
+
+  toast.style.display = 'flex';
+  void toast.offsetWidth;
+  toast.classList.add('app-toast--visible');
+
+  if (toast.hideTimeout) {
+    clearTimeout(toast.hideTimeout);
+  }
+
+  toast.hideTimeout = setTimeout(() => {
+    toast.classList.remove('app-toast--visible');
+    setTimeout(() => {
+      toast.style.display = 'none';
+    }, 220);
+  }, duration);
 }
 
 function ensureProductDetailModal() {
@@ -1016,16 +1045,7 @@ function closeProductModal() {
 }
 
 function showSuccessToast(msg) {
-  const toast = ensureSuccessToast();
-  toast.textContent = msg;
-  toast.style.display = 'block';
-  toast.style.opacity = '1';
-  setTimeout(() => {
-    toast.style.opacity = '0';
-  }, 1200);
-  setTimeout(() => {
-    toast.style.display = 'none';
-  }, 1600);
+  showAppToast(msg, 'success', 2000);
 }
 
 function addModalToCart(productId, openCart = false) {
@@ -1044,13 +1064,13 @@ function addToCart(id, qty = 1) {
   syncProductsFromStorage();
   const prod = products.find(p => p.id === id);
   if (!prod || prod.stock === 0) {
-    alert('Producto sin stock');
+    showAppToast('Producto sin stock', 'error');
     return false;
   }
   const currentQtyInCart = getCartQuantity(id);
   const nextQty = currentQtyInCart + qty;
   if (qty < 1 || nextQty > prod.stock) {
-    alert('Cantidad inválida');
+    showAppToast('Cantidad invalida', 'error');
     return false;
   }
 
@@ -1131,14 +1151,14 @@ function renderCart() {
 function checkout() {
   syncProductsFromStorage();
   if (cart.length === 0) {
-    alert('Tu carrito está vacío.');
+    showAppToast('Tu carrito esta vacio', 'error');
     return;
   }
 
   for (const item of cart) {
     const product = products.find(p => p.id === item.id);
     if (!product || product.stock < item.qty) {
-      alert(`No hay stock suficiente para ${product?.name || 'uno de los productos'}.`);
+      showAppToast(`No hay stock suficiente para ${product?.name || 'uno de los productos'}.`, 'error');
       refreshVisibleProductSections();
       renderCart();
       return;
