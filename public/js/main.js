@@ -847,9 +847,10 @@ function showProductDetailModal(id) {
   const stock = product.stock !== undefined ? product.stock : 10;
   const detailText = product.details && product.details.trim() ? product.details : 'Sin descripción disponible.';
   const hasLongDescription = detailText.length > 220;
-  const descriptionHint = hasLongDescription ? '<div class="text-xs text-gray-400 mb-1">Desliza para leer más</div>' : '';
+  const descriptionHint = hasLongDescription ? '<div class="text-xs text-gray-400 mb-1">Desliza dentro de la descripción para leer más</div>' : '';
+  const scrollHint = '<div class="product-detail-scroll-hint text-[11px] md:hidden text-center text-gray-400 mb-2">Desliza hacia abajo para ver todo</div>';
     const descriptionClass = hasLongDescription
-        ? 'product-detail-description-box text-gray-800 text-xs md:text-sm max-h-20 md:h-32 overflow-y-auto pr-2 text-left w-full rounded-lg border border-gray-100 bg-gray-50 p-2.5 md:p-3'
+        ? 'product-detail-description-box text-gray-800 text-xs md:text-sm max-h-28 md:h-32 overflow-y-auto pr-2 text-left w-full rounded-lg border border-gray-100 bg-gray-50 p-2.5 md:p-3'
         : 'product-detail-description-box text-gray-800 text-xs md:text-sm text-left w-full min-h-[4.25rem] md:min-h-[6rem] rounded-lg border border-gray-100 bg-gray-50 p-2.5 md:p-3';
   content.innerHTML = `
       <div class="product-detail-layout flex flex-col md:flex-row gap-3 md:gap-6 items-start md:h-full md:max-h-[calc(90vh-3.5rem)] overflow-visible md:overflow-hidden">
@@ -859,6 +860,7 @@ function showProductDetailModal(id) {
         </div>
       </div>
         <div class="product-detail-main flex flex-col min-w-0 flex-1 w-full md:h-full md:overflow-hidden">
+            ${scrollHint}
             <div class="product-detail-title text-base md:text-xl text-gold-lux font-semibold mb-1 md:mb-2 leading-tight text-center md:text-left pr-8">${product.name}</div>
             <div class="product-detail-price text-sm md:text-base text-gray-700 mb-1 md:mb-2 text-center md:text-left">Precio habitual: ${getProductPriceMarkup(product)}</div>
             <div class="product-detail-stock text-xs md:text-sm text-gray-500 mb-2 md:mb-4 text-center md:text-left">Stock disponible: <span class="font-semibold text-dark-royal">${stock}</span></div>

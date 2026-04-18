@@ -290,6 +290,8 @@ form[onsubmit*='buscarProductos'] button[type='submit']:hover {
 
   #product-detail-content {
     padding: 2.75rem 0.75rem 0.75rem;
+    overflow-y: auto;
+    scroll-behavior: smooth;
   }
 
   .product-detail-layout {
@@ -324,18 +326,17 @@ form[onsubmit*='buscarProductos'] button[type='submit']:hover {
   }
 
   .product-detail-description-box {
-    max-height: 72px !important;
+    max-height: 120px !important;
     min-height: 0 !important;
     font-size: 0.9rem;
     line-height: 1.35;
   }
 
   .product-detail-actions {
-    position: sticky;
-    bottom: 0;
+    position: static;
     background: #fff;
     padding-top: 0.75rem;
-    padding-bottom: 0.1rem;
+    padding-bottom: 0.35rem;
     margin-top: 0.75rem;
   }
 
@@ -343,5 +344,13 @@ form[onsubmit*='buscarProductos'] button[type='submit']:hover {
     padding-top: 0.7rem !important;
     padding-bottom: 0.7rem !important;
     font-size: 0.9rem !important;
+  }
+
+  .product-detail-scroll-hint {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: linear-gradient(180deg, #ffffff 72%, rgba(255,255,255,0));
+    padding-bottom: 0.35rem;
   }
 }
