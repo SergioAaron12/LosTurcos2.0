@@ -68,8 +68,20 @@ function normalizeProduct(product) {
     img: product.img || '',
     details: product.details || '',
     showcase: legacyShowcase,
+    updatedAt: Number(product.updatedAt) || 0,
     showInOffers: Boolean(product.showInOffers || legacyShowcase === 'ofertas'),
     showInNew: Boolean(product.showInNew || legacyShowcase === 'nuevos')
+  };
+}
+
+function getProductsVersion(productList) {
+  return productList.reduce((latest, product) => Math.max(latest, Number(product.updatedAt) || 0), 0);
+}
+
+function stampProductUpdate(product, timestamp = Date.now()) {
+  return {
+    ...product,
+    updatedAt: timestamp
   };
 }
 
@@ -110,10 +122,20 @@ async function persistProductsToFirestore(productList) {
 }
 
 async function hydrateProductsFromFirestore() {
-  const localProducts = getInitialProducts();
+  const localProducts = getInitialProducts().map(normalizeProduct);
 
   try {
     const remoteProducts = await fetchProductsFromFirestore();
+    const localVersion = getProductsVersion(localProducts);
+    const remoteVersion = getProductsVersion(remoteProducts);
+
+    if (localProducts.length > 0 && localVersion > remoteVersion) {
+      products = localProducts;
+      localStorage.setItem('products', JSON.stringify(products));
+      await persistProductsToFirestore(products);
+      return;
+    }
+
     if (remoteProducts.length > 0) {
       products = remoteProducts;
       localStorage.setItem('products', JSON.stringify(products));
@@ -135,7 +157,7 @@ async function hydrateProductsFromFirestore() {
 function getInitialProducts() {
   const saved = localStorage.getItem('products');
   if (saved) {
-    return JSON.parse(saved);
+    return JSON.parse(saved).map(normalizeProduct);
   }
 
   return [
@@ -150,7 +172,7 @@ function getInitialProducts() {
     {id:13, name:"Crema Corporal Humectante caja 24 ud", price:52000, img:"https://picsum.photos/id/435/800/900", discount:0, category:"Cuidado Adulto", stock:10},
     {id:14, name:"Desodorante Spray pack 12 ud", price:38000, img:"https://picsum.photos/id/445/800/900", discount:0, category:"Cuidado Adulto", stock:10},
     {id:15, name:"Loción Corporal Aromática caja 10 ud", price:62000, img:"https://picsum.photos/id/465/800/900", discount:0, category:"Cuidado Adulto", stock:10}
-  ];
+  ].map(normalizeProduct);
 }
 
 function showAdminPanel() {
@@ -166,7 +188,7 @@ function showAdminLogin() {
 // Sincronizar products con localStorage
 function syncProductsFromStorage() {
   const saved = localStorage.getItem('products');
-  products = saved ? JSON.parse(saved) : getInitialProducts();
+  products = saved ? JSON.parse(saved).map(normalizeProduct) : getInitialProducts();
 }
 // admin.js - Lógica de administración independiente
 
@@ -306,16 +328,17 @@ document.getElementById('product-form').onsubmit = function(e) {
     saveProductData();
   }
   function saveProductData() {
+    const updatedAt = Date.now();
     if (id) {
       // Editar
       const idx = products.findIndex(p => p.id == id);
       if (idx > -1) {
-        products[idx] = { ...products[idx], name, price, stock, category, discount, img, details, showcase: 'index', showInOffers, showInNew };
+        products[idx] = stampProductUpdate({ ...products[idx], name, price, stock, category, discount, img, details, showcase: 'index', showInOffers, showInNew }, updatedAt);
       }
     } else {
       // Nuevo
       const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
-      products.push({ id: newId, name, price, stock, category, discount, img, details, showcase: 'index', showInOffers, showInNew });
+      products.push(stampProductUpdate({ id: newId, name, price, stock, category, discount, img, details, showcase: 'index', showInOffers, showInNew }, updatedAt));
     }
     saveProducts();
     showAdminPanel();

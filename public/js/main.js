@@ -69,8 +69,20 @@ function normalizeProduct(product) {
     img: product.img || '',
     details: product.details || '',
     showcase: legacyShowcase,
+    updatedAt: Number(product.updatedAt) || 0,
     showInOffers: Boolean(product.showInOffers || legacyShowcase === 'ofertas'),
     showInNew: Boolean(product.showInNew || legacyShowcase === 'nuevos')
+  };
+}
+
+function getProductsVersion(productList) {
+  return productList.reduce((latest, product) => Math.max(latest, Number(product.updatedAt) || 0), 0);
+}
+
+function stampProductUpdate(product, timestamp = Date.now()) {
+  return {
+    ...product,
+    updatedAt: timestamp
   };
 }
 
@@ -130,10 +142,20 @@ async function hydrateProductsFromFirestore() {
   if (remoteProductsHydrationPromise) return remoteProductsHydrationPromise;
 
   remoteProductsHydrationPromise = (async () => {
-    const localProducts = getInitialProducts();
+    const localProducts = getInitialProducts().map(normalizeProduct);
 
     try {
       const remoteProducts = await fetchProductsFromFirestore();
+      const localVersion = getProductsVersion(localProducts);
+      const remoteVersion = getProductsVersion(remoteProducts);
+
+      if (localProducts.length > 0 && localVersion > remoteVersion) {
+        products = localProducts;
+        localStorage.setItem('products', JSON.stringify(products));
+        await persistProductsToFirestore(products);
+        return;
+      }
+
       if (remoteProducts.length > 0) {
         products = remoteProducts;
         localStorage.setItem('products', JSON.stringify(products));
@@ -158,7 +180,7 @@ async function hydrateProductsFromFirestore() {
 // Sincronizar products con localStorage
 function syncProductsFromStorage() {
   const saved = localStorage.getItem('products');
-  products = saved ? JSON.parse(saved) : [];
+  products = saved ? JSON.parse(saved).map(normalizeProduct) : [];
 }
 // Funciones principales JS para la tienda
 // Incluye: buscador, renderizado de productos, carrito, filtros, etc.
@@ -429,8 +451,8 @@ function initSearchSuggestions() {
 }
 function getInitialProducts() {
   const saved = localStorage.getItem('products');
-  if (saved) return JSON.parse(saved);
-  return getDefaultProducts();
+  if (saved) return JSON.parse(saved).map(normalizeProduct);
+  return getDefaultProducts().map(normalizeProduct);
 }
 
 let products = getInitialProducts();
@@ -580,12 +602,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Editar
         const idx = products.findIndex(p => p.id == id);
         if (idx > -1) {
-          products[idx] = { ...products[idx], name, price, stock, category, discount, img };
+          products[idx] = stampProductUpdate({ ...products[idx], name, price, stock, category, discount, img });
         }
       } else {
         // Nuevo
         const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
-        products.push({ id: newId, name, price, stock, category, discount, img });
+        products.push(stampProductUpdate({ id: newId, name, price, stock, category, discount, img }));
       }
       saveProducts();
       hideProductForm();
@@ -1035,6 +1057,7 @@ function addToCart(id, qty = 1) {
 
   // Disminuir stock
   prod.stock -= qty;
+  prod.updatedAt = Date.now();
   saveProducts();
   saveCart();
   renderCart();
