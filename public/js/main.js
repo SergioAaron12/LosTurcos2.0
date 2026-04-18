@@ -851,10 +851,13 @@ function renderProducts(containerId, listOrOnlyDiscount = false) {
     const imageClass = containerId === 'ofertas-grid'
       ? 'w-full h-41 object-contain bg-white p-3'
       : 'w-full h-60 object-cover';
+    const stockBadge = isOutOfStock
+      ? '<span class="stock-status-badge stock-status-badge--out">Agotado</span>'
+      : '';
     const badge = p.discount ? 
       `<span class="discount-badge">-${p.discount}%</span>` : '';
     const stockMarkup = isOutOfStock
-      ? '<div class="product-stock-label product-stock-label--out">Agotado</div>'
+      ? ''
       : `<div class="product-stock-label">Stock: ${stock}</div>`;
     const quickAddButton = showQuickAdd
       ? `<button class="w-full py-3 btn-lux rounded-lg font-medium transition text-sm add-product-btn" data-id="${p.id}" ${isOutOfStock ? 'disabled' : ''}>${isOutOfStock ? 'Agotado' : '+ Agregar'}</button>`
@@ -867,6 +870,7 @@ function renderProducts(containerId, listOrOnlyDiscount = false) {
     card.dataset.productId = p.id;
     card.innerHTML = `
       <img src="${p.img}" class="${imageClass}" alt="${p.name}">
+      ${stockBadge}
       ${badge}
       <div class="p-5">
         <h3 class="text-lg ornate-serif font-semibold mb-2 text-gold-lux">${p.name}</h3>

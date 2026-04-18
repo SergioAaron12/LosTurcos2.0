@@ -79,6 +79,30 @@ body {
   white-space: nowrap;
   box-shadow: 0 8px 18px rgba(15, 28, 63, 0.18);
 }
+.stock-status-badge {
+  position: absolute;
+  top: 0.9rem;
+  left: 0.9rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 5.4rem;
+  min-height: 2rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 0.85rem 0.85rem 0.85rem 0.2rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  box-shadow: 0 8px 18px rgba(15, 28, 63, 0.18);
+}
+.stock-status-badge--out {
+  border: 1px solid #ef4444;
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  color: #fff;
+}
 .product-stock-label {
   margin-bottom: 0.9rem;
   color: #5f6368;
@@ -317,6 +341,15 @@ form[onsubmit*='buscarProductos'] button[type='submit']:hover {
     min-height: 1.85rem;
     padding: 0.3rem 0.75rem;
     font-size: 0.85rem;
+  }
+
+  .stock-status-badge {
+    top: 0.75rem;
+    left: 0.75rem;
+    min-width: 5rem;
+    min-height: 1.85rem;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.8rem;
   }
 
   #cart-items li {
