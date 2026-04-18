@@ -459,8 +459,9 @@ function renderCart() {
 }
 
 function toggleCart() {
+  const modal = ensureCartModal();
   renderCart();
-  document.getElementById('cart-modal').classList.toggle('hidden');
+  modal.classList.toggle('hidden');
 }
 
 
@@ -638,6 +639,43 @@ function ensureProductDetailModal() {
   return modal;
 }
 
+function ensureCartModal() {
+  let modal = document.getElementById('cart-modal');
+  if (modal && document.getElementById('cart-items')) {
+    return modal;
+  }
+
+  modal = document.createElement('div');
+  modal.id = 'cart-modal';
+  modal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden';
+  modal.innerHTML = `
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md relative overflow-hidden">
+      <button onclick="toggleCart()" class="absolute top-2 right-2 text-gray-500 hover:text-red-500"><i class="fa fa-times"></i></button>
+      <div class="p-6 border-b">
+        <h2 class="text-xl font-bold">Carrito de Compras</h2>
+      </div>
+      <div id="cart-items" class="p-6 max-h-[55vh] overflow-y-auto"></div>
+      <div class="p-6 bg-gray-50 border-t space-y-3">
+        <div class="flex items-center justify-between text-sm text-gray-600">
+          <span>Subtotal</span>
+          <span id="cart-subtotal">$0</span>
+        </div>
+        <div class="flex items-center justify-between text-sm text-green-700">
+          <span>Descuento</span>
+          <span id="cart-discount">-$0</span>
+        </div>
+        <div class="flex items-center justify-between text-lg font-bold">
+          <span>Total</span>
+          <span id="cart-total">$0</span>
+        </div>
+        <button onclick="checkout()" class="w-full px-4 py-3 bg-gold-lux text-dark-royal rounded hover:bg-yellow-400 transition font-semibold">Solicitar cotización</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  return modal;
+}
+
 function getProductPriceMarkup(product) {
   const hasDiscount = Number(product.discount) > 0;
   if (!hasDiscount) {
@@ -718,14 +756,15 @@ function renderHomeCatalog() {
   syncProductsFromStorage();
   const sortSelect = document.getElementById('ordenar');
   const criterion = sortSelect ? sortSelect.value : 'relevancia';
-  const allProducts = applySortCriteria([...products], criterion);
-  renderProducts('products-grid', allProducts);
+  const featuredProducts = applySortCriteria([...products], criterion).slice(0, 8);
+  renderProducts('products-grid', featuredProducts);
 }
 
 function renderProducts(containerId, listOrOnlyDiscount = false) {
   syncProductsFromStorage();
   const grid = document.getElementById(containerId);
   if (!grid) return;
+  const showQuickAdd = true;
 
   const onlyDiscount = typeof listOrOnlyDiscount === 'boolean' ? listOrOnlyDiscount : false;
   const externalList = Array.isArray(listOrOnlyDiscount) ? listOrOnlyDiscount : null;
@@ -752,6 +791,12 @@ function renderProducts(containerId, listOrOnlyDiscount = false) {
       : 'w-full h-60 object-cover';
     const badge = p.discount ? 
       `<span class="absolute top-3 right-3 bg-pomegranate text-white text-xs font-bold px-3 py-1 rounded-full shadow lux-frame">-${p.discount}%</span>` : '';
+    const quickAddButton = showQuickAdd
+      ? `<button class="w-full py-3 btn-lux rounded-lg font-medium transition text-sm add-product-btn" data-id="${p.id}">+ Agregar</button>`
+      : '';
+    const actionsMarkup = showQuickAdd
+      ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><button class="w-full py-3 bg-gold-lux/10 hover:bg-gold-lux/25 text-gold-lux border border-gold-lux/30 rounded-lg font-medium transition text-sm show-detail-btn" data-id="${p.id}">Ver detalle</button>${quickAddButton}</div>`
+      : `<button class="w-full py-3 bg-gold-lux/10 hover:bg-gold-lux/25 text-gold-lux border border-gold-lux/30 rounded-lg font-medium transition text-sm show-detail-btn" data-id="${p.id}">Ver detalle</button>`;
     const card = document.createElement('div');
     card.className = 'product-card relative cursor-pointer';
     card.dataset.productId = p.id;
@@ -761,9 +806,7 @@ function renderProducts(containerId, listOrOnlyDiscount = false) {
       <div class="p-5">
         <h3 class="text-lg ornate-serif font-semibold mb-2 text-gold-lux">${p.name}</h3>
         <div class="text-xl mb-3">${getProductPriceMarkup(p)}</div>
-        <button class="w-full py-3 bg-gold-lux/10 hover:bg-gold-lux/25 text-gold-lux border border-gold-lux/30 rounded-lg font-medium transition text-sm show-detail-btn" data-id="${p.id}">
-          Ver detalle
-        </button>
+        ${actionsMarkup}
       </div>
     `;
     card.addEventListener('click', function(e) {
@@ -779,6 +822,17 @@ function renderProducts(containerId, listOrOnlyDiscount = false) {
       e.stopPropagation();
       const id = parseInt(this.getAttribute('data-id'));
       showProductDetailModal(id);
+    });
+  });
+
+  grid.querySelectorAll('.add-product-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const id = parseInt(this.getAttribute('data-id'));
+      const added = addToCart(id, 1);
+      if (added) {
+        showSuccessToast('Agregado con éxito');
+      }
     });
   });
 }
@@ -821,8 +875,8 @@ function showProductDetailModal(id) {
         ${descriptionHint}
         <div class="${descriptionClass}">${detailText}</div>
         <div class="flex flex-col sm:flex-row gap-3 w-full mt-4 pt-4 border-t border-gray-100">
-          <button ${stock <= 0 ? 'disabled' : ''} onclick="addModalToCart(${product.id})" class="flex-1 py-3 bg-gold-lux text-black rounded-lg font-semibold hover:bg-gold-lux/90 transition disabled:opacity-50 disabled:cursor-not-allowed">Agregar al carrito</button>
-          <button ${stock <= 0 ? 'disabled' : ''} onclick="addModalToCart(${product.id}, true)" class="flex-1 py-3 bg-turquoise-jewel text-black rounded-lg font-semibold hover:bg-turquoise-jewel/90 transition disabled:opacity-50 disabled:cursor-not-allowed">Comprar ahora</button>
+          <button ${stock <= 0 ? 'disabled' : ''} onclick="addModalToCart(${product.id})" class="flex-1 py-3 btn-lux rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed">Agregar al carrito</button>
+          <button ${stock <= 0 ? 'disabled' : ''} onclick="addModalToCart(${product.id}, true)" class="flex-1 py-3 btn-lux rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed">Comprar ahora</button>
         </div>
       </div>
     </div>
@@ -983,15 +1037,33 @@ function checkout() {
     `Total: $${summary.total.toLocaleString('es-CL')}`
   ].join('\n');
 
-  const whatsappNumber = '56997862467';
-  window.open(`https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent(message)}`, '_blank');
+  openWhatsAppChat(message);
+}
+
+const WHATSAPP_NUMBER = '56997862467';
+
+function openWhatsAppChat(message) {
+  window.open(`https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(message)}`, '_blank');
+}
+
+function initFooterWhatsAppButtons() {
+  document.querySelectorAll('footer .btn-lux').forEach(button => {
+    if (button.dataset.whatsappBound === 'true') return;
+
+    button.dataset.whatsappBound = 'true';
+    button.addEventListener('click', () => {
+      openWhatsAppChat('Hola, quiero solicitar acceso mayorista.');
+    });
+  });
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
   await hydrateProductsFromFirestore();
   ensureSuccessToast();
+  ensureCartModal();
   ensureProductDetailModal();
   initSearchSuggestions();
+  initFooterWhatsAppButtons();
   initHomePage();
   setTimeout(() => {
     initCategoryPage();
@@ -1016,6 +1088,7 @@ function applySortCriteria(list, criterion) {
 function initCategoryPage() {
   const pageName = window.location.pathname.split('/').pop();
   const categoryMap = {
+    'adulto-mayor.html': 'Cuidado Adulto',
     'aseo.html': 'Aseo',
     'auto.html': 'Auto',
     'bano-y-cocina.html': 'Baño y Cocina',
@@ -1029,6 +1102,7 @@ function initCategoryPage() {
     'papeleria-industrial.html': 'Papeleria Industrial',
     'pisos-y-muebles.html': 'Pisos y Muebles',
     'preservativos.html': 'Preservativos',
+    'proteccion-solar.html': 'Protección Solar',
     'regalos.html': 'Regalos',
     'repelentes.html': 'Repelentes',
     'the-pink-stuff.html': 'The Pink Stuff'

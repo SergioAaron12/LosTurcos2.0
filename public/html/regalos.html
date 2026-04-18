@@ -22,9 +22,12 @@
         </div>
       </div>
       <div class="flex-1 flex justify-center">
-        <form onsubmit="event.preventDefault(); buscarProductos();" class="w-full max-w-md flex">
-          <input id="buscador" type="text" placeholder="Buscar productos..." class="w-full px-6 py-2 rounded-l-lg border border-gold-lux focus:outline-none focus:ring-2 focus:ring-turquoise-jewel text-lg" style="min-width:500px; max-width:900px;" />
-          <button type="submit" class="px-6 py-2 bg-gold-lux text-dark-royal font-bold rounded-r-lg hover:bg-yellow-400 transition text-lg">Buscar</button>
+        <form onsubmit="event.preventDefault(); buscarProductos();" class="w-full max-w-md relative">
+          <div class="flex">
+            <input id="buscador" type="text" placeholder="Buscar productos..." autocomplete="off" class="w-full px-6 py-2 rounded-l-lg border border-gold-lux focus:outline-none focus:ring-2 focus:ring-turquoise-jewel text-lg" style="min-width:500px; max-width:900px;" />
+            <button type="submit" class="px-6 py-2 bg-gold-lux text-dark-royal font-bold rounded-r-lg hover:bg-yellow-400 transition text-lg">Buscar</button>
+          </div>
+          <div id="buscador-sugerencias" class="hidden absolute left-0 right-0 top-full mt-2 bg-white border border-gold-lux/30 rounded-xl shadow-2xl overflow-hidden z-50"></div>
         </form>
       </div>
       <div class="flex items-center gap-6">
@@ -51,7 +54,7 @@
         <li><a href="../html/cuidado-bucal.html" class="hover:underline">Cuidado Bucal</a></li>
         <li><a href="../html/cuidado-capilar.html" class="hover:underline">Cuidado Capilar</a></li>
         <li><a href="../html/cuidado-mujer.html" class="hover:underline">Cuidado Mujer</a></li>
-        <li><a href="../html/higiene-cuidado-personal.html" class="hover:underline">Higiene y Cuidado Personal</a></li>
+        <li><a href="../html/higiene-y-cuidado-personal.html" class="hover:underline">Higiene y Cuidado Personal</a></li>
         <li><a href="../html/repelentes.html" class="hover:underline">Repelentes</a></li>
         <li><a href="../html/the-pink-stuff.html" class="hover:underline">The Pink Stuff</a></li>
         <li><a href="../html/papeleria-industrial.html" class="hover:underline">Papeleria Industrial</a></li>
@@ -94,7 +97,7 @@
   <header id="inicio" class="royal-bg min-h-[40vh] flex items-center relative pt-20 pb-10">
     <div class="relative max-w-6xl mx-auto px-6 text-center text-black">
       <h1 class="text-4xl md:text-6xl ornate-serif font-bold leading-tight mb-5 drop-shadow-md">Regalos</h1>
-      <p class="text-base md:text-lg text-black/60 mt-4 max-w-3xl mx-auto">Catálogo de productos de regalos importados</p>
+      <p class="text-base md:text-lg text-black/60 mt-4 max-w-3xl mx-auto">Catálogo de productos de regalos</p>
     </div>
   </header>
   <section id="productos" class="py-16">

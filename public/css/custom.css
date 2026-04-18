@@ -7,6 +7,7 @@
   max-width: unset !important;
 }
 :root {
+  --gold-lux:     #f4c542;
   --gold-deep:    #b8860b;
   --turquoise-jewel: #00a896;
   --indigo-night: #0f1c3f;
@@ -58,11 +59,13 @@ body {
   box-shadow: 0 16px 40px rgba(0,168,150,0.18);
 }
 .btn-lux {
-  background: linear-gradient(135deg, var(--gold-lux), #2f2f2e);
+  background: var(--gold-lux);
   color: var(--dark-royal);
+  border: 1px solid rgba(184, 134, 11, 0.35);
   transition: all 0.3s ease;
 }
 .btn-lux:hover {
+  background: #ffd54f;
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(144, 144, 144, 0.3);
 }
@@ -105,6 +108,26 @@ img {
   width: 100%;
   min-width: 0 !important;
   max-width: 100% !important;
+}
+
+form[onsubmit*='buscarProductos'] button[type='submit'] {
+  background: var(--gold-lux) !important;
+  color: var(--dark-royal) !important;
+  border: 1px solid rgba(184, 134, 11, 0.35);
+}
+
+form[onsubmit*='buscarProductos'] button[type='submit']:hover {
+  background: #ffd54f !important;
+}
+
+#cart-modal button[onclick='checkout()'] {
+  background: var(--gold-lux) !important;
+  color: var(--dark-royal) !important;
+  border: 1px solid rgba(184, 134, 11, 0.35);
+}
+
+#cart-modal button[onclick='checkout()']:hover {
+  background: #ffd54f !important;
 }
 
 #buscador,

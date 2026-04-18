@@ -159,26 +159,6 @@
       © 2026 Los Turco 2.0 – Todos los derechos reservados
     </div>
   </footer>
-
-  <div id="cart-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center z-50">
-    <div class="bg-white w-full max-w-md mx-5 rounded-2xl overflow-hidden shadow-2xl lux-frame">
-      <div class="p-5 border-b flex justify-between items-center">
-        <h3 class="text-lg ornate-serif text-gold-lux">Tu Carrito</h3>
-        <button onclick="toggleCart()" class="text-3xl text-gray-500 hover:text-gray-800">×</button>
-      </div>
-      <div id="cart-items" class="p-5 max-h-[55vh] overflow-y-auto space-y-5"></div>
-      <div class="p-5 bg-gray-50 border-t">
-        <div class="flex justify-between text-lg font-semibold mb-5">
-          <span>Total</span>
-          <span id="cart-total" class="text-turquoise-jewel">$0</span>
-        </div>
-        <button onclick="checkout()" class="w-full btn-lux py-4 rounded-xl font-semibold">
-          Solicitar Cotización
-        </button>
-      </div>
-    </div>
-  </div>
-
   <script src="../js/main.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
