@@ -58,6 +58,7 @@ function initFirebaseApp() {
 }
 
 function normalizeProduct(product) {
+  const legacyShowcase = product.showcase || 'index';
   return {
     id: Number(product.id),
     name: product.name || '',
@@ -67,7 +68,17 @@ function normalizeProduct(product) {
     discount: Number(product.discount) || 0,
     img: product.img || '',
     details: product.details || '',
-    showcase: product.showcase || 'index'
+    showcase: legacyShowcase,
+    showInOffers: Boolean(product.showInOffers || legacyShowcase === 'ofertas'),
+    showInNew: Boolean(product.showInNew || legacyShowcase === 'nuevos')
+  };
+}
+
+function getProductDisplayFlags(product) {
+  const legacyShowcase = product.showcase || 'index';
+  return {
+    showInOffers: Boolean(product.showInOffers || legacyShowcase === 'ofertas'),
+    showInNew: Boolean(product.showInNew || legacyShowcase === 'nuevos')
   };
 }
 
@@ -206,10 +217,10 @@ function renderSearchResultsSection(results, query) {
 }
 
 function renderAllProductsSection() {
-  syncProductsFromStorage();
   const sortSelect = document.getElementById('ordenar');
   const criterion = sortSelect ? sortSelect.value : 'default';
-  const allProducts = applySortCriteria([...products], criterion);
+  const allProducts = applySortCriteria(getProductsForTodosView(), criterion);
+  updateTodosPageHeading(allProducts);
   renderProducts('products-grid', allProducts);
 }
 
@@ -709,18 +720,67 @@ function getCartSummary() {
 
 function getProductsByShowcase(showcase) {
   syncProductsFromStorage();
-  return products.filter(product => (product.showcase || 'index') === showcase);
+  return products.filter(product => {
+    const flags = getProductDisplayFlags(product);
+    if (showcase === 'nuevos') return flags.showInNew;
+    if (showcase === 'ofertas') return flags.showInOffers;
+    return (product.showcase || 'index') === showcase;
+  });
 }
 
 function getOfferProducts() {
   syncProductsFromStorage();
   const seen = new Set();
   return products.filter(product => {
-    const isOffer = (product.showcase || 'index') === 'ofertas' || Number(product.discount) > 0;
+    const flags = getProductDisplayFlags(product);
+    const isOffer = flags.showInOffers || Number(product.discount) > 0;
     if (!isOffer || seen.has(product.id)) return false;
     seen.add(product.id);
     return true;
   });
+}
+
+function getProductsForTodosView() {
+  syncProductsFromStorage();
+  const params = new URLSearchParams(window.location.search);
+  const view = (params.get('view') || '').toLowerCase();
+
+  if (view === 'ofertas') {
+    return getOfferProducts();
+  }
+
+  if (view === 'nuevos') {
+    return getProductsByShowcase('nuevos');
+  }
+
+  return [...products];
+}
+
+function updateTodosPageHeading(list) {
+  const pageName = window.location.pathname.split('/').pop();
+  if (pageName !== 'todos.html') return;
+
+  const params = new URLSearchParams(window.location.search);
+  const view = (params.get('view') || '').toLowerCase();
+  const heading = document.querySelector('#productos h2');
+  const description = document.querySelector('#productos p');
+
+  if (!heading || !description) return;
+
+  if (view === 'ofertas') {
+    heading.textContent = 'Todas las ofertas';
+    description.textContent = `Mostrando ${list.length} producto${list.length === 1 ? '' : 's'} con descuento.`;
+    return;
+  }
+
+  if (view === 'nuevos') {
+    heading.textContent = 'Nuevos productos';
+    description.textContent = `Mostrando ${list.length} producto${list.length === 1 ? '' : 's'} nuevos.`;
+    return;
+  }
+
+  heading.textContent = 'Todos los productos';
+  description.textContent = 'Aquí se mantiene el catálogo completo.';
 }
 
 function renderHomeSection(containerId, showcase, emptyMessage) {
@@ -740,8 +800,8 @@ function initHomePage() {
   const pageName = window.location.pathname.split('/').pop() || 'index.html';
   if (pageName !== 'index.html') return;
 
-  renderProducts('ofertas-grid', getOfferProducts());
-  renderHomeSection('nuevos-grid', 'nuevos', 'No hay productos nuevos por ahora.');
+  renderProducts('ofertas-grid', getOfferProducts().slice(0, 4));
+  renderProducts('nuevos-grid', getProductsByShowcase('nuevos').slice(0, 4));
 
   renderHomeCatalog();
 
@@ -1111,7 +1171,7 @@ function initCategoryPage() {
   };
 
   if (pageName === 'todos.html') {
-    renderProducts('products-grid');
+    renderAllProductsSection();
   } else if (categoryMap[pageName]) {
     filterByCategory(categoryMap[pageName]);
   } else {
@@ -1123,6 +1183,11 @@ function initCategoryPage() {
 
   sortSelect.dataset.globalBound = 'true';
   sortSelect.addEventListener('change', function() {
+    if (pageName === 'todos.html') {
+      renderAllProductsSection();
+      return;
+    }
+
     syncProductsFromStorage();
     let list = [...products];
     if (categoryMap[pageName]) {

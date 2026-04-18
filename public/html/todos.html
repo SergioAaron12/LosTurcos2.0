@@ -174,20 +174,9 @@
   <script src="../js/main.js"></script>
   <script>
     function ordenarProductos() {
-      const criterio = document.getElementById('ordenar').value;
-      let productosOrdenados = [...products];
-      if (criterio === 'precio-asc') {
-        productosOrdenados.sort((a, b) => a.price - b.price);
-      } else if (criterio === 'precio-desc') {
-        productosOrdenados.sort((a, b) => b.price - a.price);
-      } else if (criterio === 'nombre-asc') {
-        productosOrdenados.sort((a, b) => a.name.localeCompare(b.name));
-      } else if (criterio === 'nombre-desc') {
-        productosOrdenados.sort((a, b) => b.name.localeCompare(a.name));
-      }
-      renderProducts('products-grid', productosOrdenados);
+      renderAllProductsSection();
     }
-    window.renderProducts('products-grid');
+    window.renderAllProductsSection();
   </script>
 </body>
 </html>
