@@ -846,13 +846,18 @@ function renderProducts(containerId, listOrOnlyDiscount = false) {
   }
 
   filtered.forEach(p => {
+    const stock = Number(p.stock) || 0;
+    const isOutOfStock = stock <= 0;
     const imageClass = containerId === 'ofertas-grid'
       ? 'w-full h-41 object-contain bg-white p-3'
       : 'w-full h-60 object-cover';
     const badge = p.discount ? 
       `<span class="discount-badge">-${p.discount}%</span>` : '';
+    const stockMarkup = isOutOfStock
+      ? '<div class="product-stock-label product-stock-label--out">Agotado</div>'
+      : `<div class="product-stock-label">Stock: ${stock}</div>`;
     const quickAddButton = showQuickAdd
-      ? `<button class="w-full py-3 btn-lux rounded-lg font-medium transition text-sm add-product-btn" data-id="${p.id}">+ Agregar</button>`
+      ? `<button class="w-full py-3 btn-lux rounded-lg font-medium transition text-sm add-product-btn" data-id="${p.id}" ${isOutOfStock ? 'disabled' : ''}>${isOutOfStock ? 'Agotado' : '+ Agregar'}</button>`
       : '';
     const actionsMarkup = showQuickAdd
       ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><button class="w-full py-3 bg-gold-lux/10 hover:bg-gold-lux/25 text-gold-lux border border-gold-lux/30 rounded-lg font-medium transition text-sm show-detail-btn" data-id="${p.id}">Ver detalle</button>${quickAddButton}</div>`
@@ -866,6 +871,7 @@ function renderProducts(containerId, listOrOnlyDiscount = false) {
       <div class="p-5">
         <h3 class="text-lg ornate-serif font-semibold mb-2 text-gold-lux">${p.name}</h3>
         <div class="text-xl mb-3">${getProductPriceMarkup(p)}</div>
+        ${stockMarkup}
         ${actionsMarkup}
       </div>
     `;
@@ -905,6 +911,7 @@ function showProductDetailModal(id) {
   const modal = ensureProductDetailModal();
   const content = document.getElementById('product-detail-content');
   const stock = product.stock !== undefined ? product.stock : 10;
+  const isOutOfStock = stock <= 0;
   const detailText = product.details && product.details.trim() ? product.details : 'Sin descripción disponible.';
   const hasLongDescription = detailText.length > 220;
   const descriptionHint = hasLongDescription ? '<div class="text-xs text-gray-400 mb-1">Desliza dentro de la descripción para leer más</div>' : '';
@@ -923,13 +930,13 @@ function showProductDetailModal(id) {
             ${scrollHint}
             <div class="product-detail-title text-base md:text-xl text-gold-lux font-semibold mb-1 md:mb-2 leading-tight text-center md:text-left pr-8">${product.name}</div>
             <div class="product-detail-price text-sm md:text-base text-gray-700 mb-1 md:mb-2 text-center md:text-left">Precio habitual: ${getProductPriceMarkup(product)}</div>
-            <div class="product-detail-stock text-xs md:text-sm text-gray-500 mb-2 md:mb-4 text-center md:text-left">Stock disponible: <span class="font-semibold text-dark-royal">${stock}</span></div>
+            <div class="product-detail-stock text-xs md:text-sm ${isOutOfStock ? 'text-red-600' : 'text-gray-500'} mb-2 md:mb-4 text-center md:text-left">${isOutOfStock ? '<span class="font-semibold">Producto agotado</span>' : `Stock disponible: <span class="font-semibold text-dark-royal">${stock}</span>`}</div>
             <div class="product-detail-qty mb-2 md:mb-4 flex flex-col items-center md:items-start gap-1 md:gap-2">
               <label class="text-xs md:text-sm text-gray-700">Cantidad</label>
               <div class="product-detail-stepper flex items-center border rounded-lg px-2 md:px-3 py-2 md:py-3 bg-gray-50" style="width: 120px;">
-              <button type="button" id="btn-restar" class="text-lg md:text-xl px-2.5 md:px-3 text-gray-500 hover:text-dark-royal" tabindex="-1">−</button>
+              <button type="button" id="btn-restar" class="text-lg md:text-xl px-2.5 md:px-3 text-gray-500 hover:text-dark-royal" tabindex="-1" ${isOutOfStock ? 'disabled' : ''}>−</button>
               <input id="modal-cantidad" type="number" min="1" max="${stock}" value="${stock > 0 ? 1 : 0}" class="w-10 md:w-11 px-1 py-0.5 border-0 bg-transparent text-center text-base md:text-lg font-semibold outline-none" readonly />
-              <button type="button" id="btn-sumar" class="text-lg md:text-xl px-2.5 md:px-3 text-gray-500 hover:text-dark-royal" tabindex="-1">+</button>
+              <button type="button" id="btn-sumar" class="text-lg md:text-xl px-2.5 md:px-3 text-gray-500 hover:text-dark-royal" tabindex="-1" ${isOutOfStock ? 'disabled' : ''}>+</button>
           </div>
           <div id="stock-msg" class="text-xs text-red-600 mt-1" style="display:none"></div>
         </div>
@@ -937,8 +944,8 @@ function showProductDetailModal(id) {
         ${descriptionHint}
         <div class="${descriptionClass}">${detailText}</div>
             <div class="product-detail-actions flex flex-col sm:flex-row gap-2 md:gap-3 w-full mt-2 md:mt-4 pt-2 md:pt-4 border-t border-gray-100">
-            <button ${stock <= 0 ? 'disabled' : ''} onclick="addModalToCart(${product.id})" class="flex-1 py-2.5 md:py-3 text-sm md:text-base btn-lux rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed">Agregar al carrito</button>
-            <button ${stock <= 0 ? 'disabled' : ''} onclick="addModalToCart(${product.id}, true)" class="flex-1 py-2.5 md:py-3 text-sm md:text-base btn-lux rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed">Comprar ahora</button>
+            <button ${isOutOfStock ? 'disabled' : ''} onclick="addModalToCart(${product.id})" class="flex-1 py-2.5 md:py-3 text-sm md:text-base btn-lux rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed">${isOutOfStock ? 'Agotado' : 'Agregar al carrito'}</button>
+            <button ${isOutOfStock ? 'disabled' : ''} onclick="addModalToCart(${product.id}, true)" class="flex-1 py-2.5 md:py-3 text-sm md:text-base btn-lux rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed">${isOutOfStock ? 'No disponible' : 'Comprar ahora'}</button>
         </div>
       </div>
     </div>
@@ -1027,10 +1034,28 @@ function addToCart(id, qty = 1) {
   saveProducts();
   saveCart();
   renderCart();
-  if (document.getElementById('products-grid')) {
-    renderProducts('products-grid');
-  }
+  refreshVisibleProductSections();
   return true;
+}
+
+function refreshVisibleProductSections() {
+  if (document.getElementById('ofertas-grid') || document.getElementById('nuevos-grid')) {
+    initHomePage();
+  }
+
+  if (document.getElementById('products-grid')) {
+    const pageName = window.location.pathname.split('/').pop() || 'index.html';
+    if (pageName === 'todos.html') {
+      const searchSection = document.getElementById('search-results-section');
+      if (searchSection && !searchSection.classList.contains('hidden')) {
+        applySearchFromUrl();
+      } else {
+        renderAllProductsSection();
+      }
+    } else if (!document.getElementById('ofertas-grid') && !document.getElementById('nuevos-grid')) {
+      initCategoryPage();
+    }
+  }
 }
 
 function renderCart() {

@@ -28,7 +28,10 @@
         <input type="hidden" id="product-id" />
         <div class="mb-2"><label>Nombre: <input id="product-name" class="border rounded px-2 py-1 w-full" required /></label></div>
         <div class="mb-2"><label>Precio: <input id="product-price" type="number" min="0" class="border rounded px-2 py-1 w-full" required /></label></div>
-        <div class="mb-2"><label>Stock: <input id="product-stock" type="number" min="0" class="border rounded px-2 py-1 w-full" required /></label></div>
+        <div class="mb-2">
+          <label>Stock: <input id="product-stock" type="number" min="0" step="1" class="border rounded px-2 py-1 w-full" required /></label>
+          <p class="text-xs text-gray-500 mt-1">Ingresa la cantidad disponible. Si guardas 0, el producto se mostrará como agotado en la tienda.</p>
+        </div>
         <div class="mb-2">
           <label>Categoría:
             <select id="product-category" class="border rounded px-2 py-1 w-full" required>

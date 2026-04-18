@@ -201,6 +201,10 @@ function renderAdminProducts() {
   }
   products.forEach(p => {
     const flags = getProductDisplayFlags(p);
+    const stock = Number(p.stock) || 0;
+    const stockStatus = stock <= 0
+      ? '<span class="font-semibold text-red-600">Agotado</span>'
+      : `<span class="font-semibold text-emerald-600">Disponible</span> (${stock})`;
     const visibility = [
       'Catalogo general',
       flags.showInOffers ? 'Ofertas' : null,
@@ -212,7 +216,7 @@ function renderAdminProducts() {
       <img src="${p.img}" class="w-16 h-16 object-cover rounded"/>
       <div class="flex-1">
         <div class="font-bold">${p.name}</div>
-        <div>Stock: <span>${p.stock || 0}</span></div>
+        <div>Stock: ${stockStatus}</div>
         <div>Precio: $${p.price.toLocaleString('es-CL')}</div>
         <div>Categoría: ${p.category || ''}</div>
         <div>Descuento: ${p.discount || 0}%</div>
@@ -276,7 +280,8 @@ document.getElementById('product-form').onsubmit = function(e) {
   const id = document.getElementById('product-id').value;
   const name = document.getElementById('product-name').value;
   const price = parseInt(document.getElementById('product-price').value);
-  const stock = parseInt(document.getElementById('product-stock').value);
+  const stockValue = document.getElementById('product-stock').value.trim();
+  const stock = Number.parseInt(stockValue, 10);
   const category = document.getElementById('product-category').value;
   const discount = parseInt(document.getElementById('product-discount').value) || 0;
   const details = document.getElementById('product-details').value;
@@ -284,6 +289,12 @@ document.getElementById('product-form').onsubmit = function(e) {
   const imgFile = document.getElementById('product-img-file').files[0];
   const showInOffers = document.getElementById('product-show-in-offers')?.checked || false;
   const showInNew = document.getElementById('product-show-in-new')?.checked || false;
+
+  if (!Number.isInteger(stock) || stock < 0) {
+    alert('Ingresa un stock valido mayor o igual a 0.');
+    return;
+  }
+
   if (imgFile) {
     const reader = new FileReader();
     reader.onload = function(ev) {

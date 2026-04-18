@@ -79,11 +79,27 @@ body {
   white-space: nowrap;
   box-shadow: 0 8px 18px rgba(15, 28, 63, 0.18);
 }
+.product-stock-label {
+  margin-bottom: 0.9rem;
+  color: #5f6368;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.product-stock-label--out {
+  color: #b91c1c;
+}
 .btn-lux {
   background: var(--gold-lux);
   color: var(--dark-royal);
   border: 1px solid rgba(184, 134, 11, 0.35);
   transition: all 0.3s ease;
+}
+.btn-lux:disabled {
+  background: #e5e7eb;
+  color: #6b7280;
+  border-color: #d1d5db;
+  box-shadow: none;
+  transform: none;
 }
 .btn-lux:hover {
   background: #ffd54f;
