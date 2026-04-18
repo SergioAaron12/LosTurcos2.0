@@ -466,6 +466,10 @@ function saveProducts() {
 
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 
+function getCartQuantity(productId) {
+  return cart.reduce((total, item) => item.id === productId ? total + item.qty : total, 0);
+}
+
 function updateCartCount() {
   document.getElementById('cart-count').textContent = cart.reduce((acc, item) => acc + item.qty, 0);
 }
@@ -680,7 +684,7 @@ function ensureCartModal() {
 
   modal = document.createElement('div');
   modal.id = 'cart-modal';
-  modal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden cart-modal-shell';
+  modal.className = 'fixed inset-0 bg-black/40 z-50 hidden cart-modal-shell';
   modal.innerHTML = `
     <div class="bg-white rounded-lg shadow-lg w-full max-w-md relative overflow-hidden cart-modal-panel">
       <button onclick="toggleCart()" class="cart-modal-close" aria-label="Cerrar carrito"><i class="fa fa-times"></i></button>
@@ -1043,7 +1047,9 @@ function addToCart(id, qty = 1) {
     alert('Producto sin stock');
     return false;
   }
-  if (qty < 1 || qty > prod.stock) {
+  const currentQtyInCart = getCartQuantity(id);
+  const nextQty = currentQtyInCart + qty;
+  if (qty < 1 || nextQty > prod.stock) {
     alert('Cantidad inválida');
     return false;
   }
@@ -1055,13 +1061,9 @@ function addToCart(id, qty = 1) {
     cart.push({id, qty});
   }
 
-  // Disminuir stock
-  prod.stock -= qty;
-  prod.updatedAt = Date.now();
   saveProducts();
   saveCart();
   renderCart();
-  refreshVisibleProductSections();
   return true;
 }
 
@@ -1133,6 +1135,16 @@ function checkout() {
     return;
   }
 
+  for (const item of cart) {
+    const product = products.find(p => p.id === item.id);
+    if (!product || product.stock < item.qty) {
+      alert(`No hay stock suficiente para ${product?.name || 'uno de los productos'}.`);
+      refreshVisibleProductSections();
+      renderCart();
+      return;
+    }
+  }
+
   const summary = getCartSummary();
   const lines = cart.map(item => {
     const product = products.find(p => p.id === item.id);
@@ -1150,6 +1162,20 @@ function checkout() {
     `Descuento: -$${summary.discount.toLocaleString('es-CL')}`,
     `Total: $${summary.total.toLocaleString('es-CL')}`
   ].join('\n');
+
+  cart.forEach(item => {
+    const product = products.find(p => p.id === item.id);
+    if (!product) return;
+    product.stock -= item.qty;
+    product.updatedAt = Date.now();
+  });
+
+  saveProducts();
+  cart = [];
+  saveCart();
+  renderCart();
+  refreshVisibleProductSections();
+  toggleCart();
 
   openWhatsAppChat(message);
 }
