@@ -37,7 +37,7 @@
             <select id="product-category" class="border rounded px-2 py-1 w-full" required>
               <option value="">Selecciona una categoría</option>
               <option value="Aseo">Aseo</option>
-              <option value="Cuidado Adulto">Cuidado Adulto</option>
+              <option value="Cuidado Adulto">Adulto mayor</option>
               <option value="Cuidado Capilar">Cuidado Capilar</option>
               <option value="Cuidado Bucal">Cuidado Bucal</option>
               <option value="Cuidado Mujer">Cuidado Mujer</option>
@@ -47,6 +47,7 @@
               <option value="Baño y Cocina">Baño y Cocina</option>
               <option value="Iluminación y Pilas">Iluminación y Pilas</option>
               <option value="Pisos y Muebles">Pisos y Muebles</option>
+              <option value="Protección Solar">Protección Solar</option>
               <option value="Repelentes">Repelentes</option>
               <option value="The Pink Stuff">The Pink Stuff</option>
               <option value="Papeleria Industrial">Papeleria Industrial</option>
@@ -58,12 +59,10 @@
             </select>
           </label>
         </div>
-        <div id="product-subcategory-wrapper" class="mb-2 hidden">
-          <label>Catálogo de Aseo:
-            <select id="product-subcategory" class="border rounded px-2 py-1 w-full" disabled>
-              <option value="">Selecciona un catálogo de Aseo</option>
-            </select>
-          </label>
+        <div id="product-catalog-assignments-wrapper" class="mb-3 hidden rounded-lg border border-gray-200 p-3 bg-gray-50">
+          <div class="font-medium text-sm text-gray-700 mb-2">Catálogos del producto</div>
+          <p class="text-xs text-gray-500 mb-3">Puedes asignar el mismo producto a varios catálogos dentro de su categoría.</p>
+          <div id="product-catalog-assignments" class="catalog-assignment-list"></div>
         </div>
         <div class="mb-2"><label>Descuento (%): <input id="product-discount" type="number" min="0" max="100" class="border rounded px-2 py-1 w-full" /></label></div>
         <div class="mb-2"><label>Detalles: <textarea id="product-details" class="border rounded px-2 py-1 w-full" rows="2"></textarea></label></div>
