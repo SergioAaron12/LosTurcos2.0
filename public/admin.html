@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="css/custom.css"/>
 </head>
 <body class="bg-gray-50 min-h-screen">
-  <div class="max-w-2xl mx-auto px-4 py-8 md:py-10">
+  <div class="max-w-5xl mx-auto px-4 py-8 md:py-10">
     <h1 class="text-3xl font-bold mb-8 text-center text-gold-lux">Modo Administrador</h1>
     <div id="admin-auth" class="mb-8 text-center">
       <div class="mb-3 text-sm text-gray-600">Acceso protegido con Firebase Auth para la cuenta administradora autorizada.</div>
@@ -99,6 +99,18 @@
         <input id="admin-product-search" type="search" placeholder="Nombre, categoría, catálogo, precio o stock" class="border rounded px-3 py-2 w-full bg-white" />
       </div>
       <div id="admin-products-grid"></div>
+
+      <section class="mt-10">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div>
+            <h2 class="text-xl font-bold">Órdenes pagadas y estados Webpay</h2>
+            <p class="text-sm text-gray-500">Listado de órdenes creadas desde el checkout con Transbank.</p>
+          </div>
+          <button type="button" id="refresh-orders-btn" class="px-3 py-2 bg-slate-800 text-white rounded w-full sm:w-auto">Actualizar órdenes</button>
+        </div>
+        <div id="admin-orders-status" class="text-sm text-gray-500 mb-3">Inicia sesión para cargar órdenes.</div>
+        <div id="admin-orders-grid" class="space-y-3"></div>
+      </section>
     </div>
   </div>
   <script src="js/admin.js"></script>

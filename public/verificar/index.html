@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verificar correo - Los Turco 2.0</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/custom.css" />
+</head>
+<body class="min-h-screen bg-stone-100 text-slate-900">
+  <main class="mx-auto flex min-h-screen max-w-3xl items-center px-4 py-10">
+    <section class="w-full overflow-hidden rounded-[28px] border border-stone-200 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.08)]">
+      <div class="bg-gradient-to-r from-amber-200 via-yellow-100 to-stone-100 px-6 py-8 md:px-10">
+        <p class="mb-3 text-sm font-semibold uppercase tracking-[0.35em] text-amber-800">Los Turco 2.0</p>
+        <h1 class="text-3xl font-bold text-slate-900 md:text-4xl" style="font-family: 'Cinzel Decorative', serif;">Verificacion de correo</h1>
+        <p class="mt-3 max-w-2xl text-sm text-slate-700 md:text-base">Esta pagina valida enlaces de Firebase Auth para la cuenta administradora y evita el error de modo invalido cuando el enlace llega con parametros inconsistentes.</p>
+      </div>
+
+      <div class="px-6 py-8 md:px-10">
+        <div id="verify-status" class="inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-sm font-medium text-slate-700">Preparando validacion...</div>
+        <h2 id="verify-title" class="mt-5 text-2xl font-semibold text-slate-900">Revisando enlace</h2>
+        <p id="verify-message" class="mt-3 text-sm leading-6 text-slate-600">Espera mientras verificamos el codigo enviado por Firebase.</p>
+
+        <div id="verify-details" class="mt-5 hidden rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm text-slate-700"></div>
+
+        <div id="verify-actions" class="mt-8 flex flex-col gap-3 sm:flex-row">
+          <a href="../admin.html" class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">Ir al administrador</a>
+          <a href="../index.html" class="inline-flex items-center justify-center rounded-xl border border-stone-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-stone-100">Volver al catalogo</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/12.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.12.0/firebase-auth-compat.js"></script>
+  <script src="../js/verify.js"></script>
+</body>
+</html>

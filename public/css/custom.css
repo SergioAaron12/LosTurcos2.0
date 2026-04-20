@@ -181,10 +181,22 @@ form[onsubmit*='buscarProductos'] button[type='submit']:hover {
   background: #ffd54f !important;
 }
 
+#cart-modal button[onclick='checkout()'],
+button[onclick='checkout()'] {
+  background: #6b7280 !important;
+  color: #ffffff !important;
+  border: 1px solid #4b5563;
+}
+
 #cart-modal button[onclick='checkout()'] {
-  background: var(--gold-lux) !important;
-  color: var(--dark-royal) !important;
-  border: 1px solid rgba(184, 134, 11, 0.35);
+  background: #6b7280 !important;
+  color: #ffffff !important;
+  border: 1px solid #4b5563;
+}
+
+#cart-modal button[onclick='checkout()']:hover,
+button[onclick='checkout()']:hover {
+  background: #4b5563 !important;
 }
 
 .cart-modal-shell {

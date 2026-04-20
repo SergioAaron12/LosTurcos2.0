@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checkout - Los Turco 2.0</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/custom.css" />
+</head>
+<body class="min-h-screen bg-[#f6f0e7] text-slate-900">
+  <main class="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
+    <div class="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.35em] text-amber-800">Los Turco 2.0</p>
+        <h1 class="mt-2 text-3xl font-bold text-slate-900 md:text-4xl" style="font-family: 'Cinzel Decorative', serif;">Pago con Transbank</h1>
+        <p class="mt-3 max-w-2xl text-sm text-slate-600 md:text-base">Confirma tus datos, revisa el pedido y te redirigimos a Webpay Plus para completar el pago seguro.</p>
+      </div>
+      <a href="index.html" class="inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white">Seguir comprando</a>
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+      <section class="rounded-[28px] border border-white/70 bg-white p-6 shadow-[0_20px_70px_rgba(15,23,42,0.08)] md:p-8">
+        <div class="mb-6 flex items-center gap-3">
+          <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white">
+            <i class="fa-solid fa-user"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-semibold text-slate-900">Datos del comprador</h2>
+            <p class="text-sm text-slate-500">Estos datos quedan asociados a la orden para identificar el pago.</p>
+          </div>
+        </div>
+
+        <form id="checkout-form" class="space-y-4">
+          <div class="grid gap-4 md:grid-cols-2">
+            <label class="block text-sm font-medium text-slate-700">
+              Nombre y apellido
+              <input id="checkout-name" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100" placeholder="Ej. María González" required />
+            </label>
+            <label class="block text-sm font-medium text-slate-700">
+              Teléfono
+              <input id="checkout-phone" type="tel" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100" placeholder="+56 9 1234 5678" required />
+            </label>
+          </div>
+
+          <label class="block text-sm font-medium text-slate-700">
+            Correo electrónico
+            <input id="checkout-email" type="email" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100" placeholder="cliente@correo.cl" required />
+          </label>
+
+          <label class="block text-sm font-medium text-slate-700">
+            Comentarios del pedido
+            <textarea id="checkout-notes" rows="4" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100" placeholder="Opcional: dirección, referencia de despacho, horario, etc."></textarea>
+          </label>
+
+          <div class="rounded-3xl border border-amber-100 bg-amber-50 px-4 py-4 text-sm text-amber-900">
+            <p class="font-semibold">Importante</p>
+            <p class="mt-1">El monto final lo recalcula el backend con precios y descuentos reales del catálogo antes de crear la transacción.</p>
+          </div>
+
+          <div id="checkout-error" class="hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"></div>
+
+          <div class="flex flex-col gap-3 pt-2 md:flex-row">
+            <button id="checkout-submit" type="submit" class="inline-flex w-full items-center justify-center rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 md:w-auto">Ir a pagar con Transbank</button>
+            <a href="index.html" class="inline-flex w-full items-center justify-center rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 md:w-auto">Volver al carrito</a>
+          </div>
+        </form>
+      </section>
+
+      <aside class="rounded-[28px] border border-[#eadcc7] bg-[#fffaf2] p-6 shadow-[0_20px_70px_rgba(120,88,27,0.08)] md:p-8">
+        <div class="flex items-center gap-3">
+          <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500 text-white">
+            <i class="fa-solid fa-cart-shopping"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-semibold text-slate-900">Resumen de tu pedido</h2>
+            <p class="text-sm text-slate-500">Se mostrará el detalle del carrito guardado en este navegador.</p>
+          </div>
+        </div>
+
+        <div id="checkout-empty" class="mt-8 hidden rounded-3xl border border-dashed border-slate-300 bg-white px-5 py-8 text-center">
+          <p class="text-base font-semibold text-slate-700">Tu carrito está vacío.</p>
+          <p class="mt-2 text-sm text-slate-500">Agrega productos antes de iniciar el pago con Transbank.</p>
+        </div>
+
+        <div id="checkout-content" class="mt-6">
+          <div id="checkout-items" class="space-y-3"></div>
+
+          <div class="mt-6 rounded-3xl bg-white px-5 py-5 shadow-sm">
+            <div class="flex items-center justify-between text-sm text-slate-500">
+              <span>Subtotal</span>
+              <span id="checkout-subtotal">$0</span>
+            </div>
+            <div class="mt-3 flex items-center justify-between text-sm text-emerald-700">
+              <span>Descuento</span>
+              <span id="checkout-discount">-$0</span>
+            </div>
+            <div class="mt-4 flex items-center justify-between border-t border-slate-100 pt-4 text-lg font-bold text-slate-900">
+              <span>Total</span>
+              <span id="checkout-total">$0</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script src="js/checkout.js"></script>
+</body>
+</html>

@@ -1,4 +1,7 @@
 {
+  "functions": {
+    "source": "functions"
+  },
   "auth": {
     "providers": {
       "emailPassword": true
@@ -45,6 +48,27 @@
       }
     ],
     "rewrites": [
+      {
+        "source": "/api/transbank/create",
+        "function": {
+          "functionId": "createTransbankTransaction",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/transbank/order",
+        "function": {
+          "functionId": "getTransbankOrder",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/transbank/return",
+        "function": {
+          "functionId": "transbankReturn",
+          "region": "us-central1"
+        }
+      },
       {
         "source": "**",
         "destination": "/index.html"

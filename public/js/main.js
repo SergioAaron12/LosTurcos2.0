@@ -568,6 +568,10 @@ function getTodosPagePath() {
   return window.location.pathname.includes('/html/') ? './todos.html' : 'html/todos.html';
 }
 
+function getCheckoutPagePath() {
+  return window.location.pathname.includes('/html/') ? '../checkout.html' : 'checkout.html';
+}
+
 function redirectToTodosSearch(query) {
   window.location.href = `${getTodosPagePath()}?search=${encodeURIComponent(query)}`;
 }
@@ -1315,7 +1319,10 @@ function ensureCartModal() {
           <span>Total</span>
           <span id="cart-total">$0</span>
         </div>
-        <button onclick="checkout()" class="w-full px-4 py-3 bg-gold-lux text-dark-royal rounded hover:bg-yellow-400 transition font-semibold">Solicitar cotización</button>
+        <div class="space-y-2">
+          <button onclick="checkout()" class="w-full px-4 py-3 bg-gold-lux text-dark-royal rounded hover:bg-yellow-400 transition font-semibold">Pagar con Transbank</button>
+          <button onclick="requestQuoteOnWhatsApp()" class="w-full px-4 py-3 border border-dark-royal/20 text-dark-royal rounded hover:bg-white transition font-semibold">Solicitar cotización por WhatsApp</button>
+        </div>
       </div>
     </div>
   `;
@@ -1745,6 +1752,16 @@ function checkout() {
     }
   }
 
+  window.location.href = getCheckoutPagePath();
+}
+
+function requestQuoteOnWhatsApp() {
+  syncProductsFromStorage();
+  if (cart.length === 0) {
+    showAppToast('Tu carrito esta vacio', 'error');
+    return;
+  }
+
   const summary = getCartSummary();
   const lines = cart.map(item => {
     const product = products.find(p => p.id === item.id);
@@ -1762,19 +1779,6 @@ function checkout() {
     `Descuento: -$${summary.discount.toLocaleString('es-CL')}`,
     `Total: $${summary.total.toLocaleString('es-CL')}`
   ].join('\n');
-
-  cart.forEach(item => {
-    const product = products.find(p => p.id === item.id);
-    if (!product) return;
-    product.stock -= item.qty;
-    product.updatedAt = Date.now();
-  });
-
-  saveProducts();
-  cart = [];
-  saveCart();
-  renderCart();
-  refreshVisibleProductSections();
   toggleCart();
 
   openWhatsAppChat(message);

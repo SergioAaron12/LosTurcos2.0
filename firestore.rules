@@ -12,6 +12,11 @@ service cloud.firestore {
       allow write: if isAuthorizedAdmin();
     }
 
+    match /webpay_orders/{orderId} {
+      allow read: if isAuthorizedAdmin();
+      allow write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

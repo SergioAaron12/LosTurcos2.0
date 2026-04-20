@@ -10,6 +10,7 @@ const FIREBASE_CONFIG = {
 const AUTHORIZED_ADMIN_EMAIL = 'elsakitodewea@gmail.com';
 
 const FIRESTORE_PRODUCTS_COLLECTION = 'products';
+const FIRESTORE_ORDERS_COLLECTION = 'webpay_orders';
 const CATEGORY_CATALOG_CONFIGS = [
   {
     key: 'regalos',
@@ -173,6 +174,7 @@ const CATEGORY_CATALOG_CONFIGS = [
 const CATEGORY_CONFIG_BY_CATEGORY = new Map(CATEGORY_CATALOG_CONFIGS.map(config => [normalizeTextValue(config.category), config]));
 let firebaseAppReadyPromise = null;
 let adminProductSearchTerm = '';
+let adminOrders = [];
 
 function normalizeTextValue(value) {
   return String(value || '').trim().toLowerCase();
@@ -520,6 +522,19 @@ async function fetchProductsFromFirestore() {
     .sort((left, right) => left.id - right.id);
 }
 
+async function fetchOrdersFromFirestore() {
+  const db = await initFirebaseApp();
+  const snapshot = await db.collection(FIRESTORE_ORDERS_COLLECTION)
+    .orderBy('createdAtMs', 'desc')
+    .limit(50)
+    .get();
+
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+}
+
 async function syncProductsToFirestore(productList) {
   const db = await initFirebaseApp();
   const snapshot = await db.collection(FIRESTORE_PRODUCTS_COLLECTION).get();
@@ -687,6 +702,7 @@ async function checkAdminPassword() {
     setAdminAuthStatus(`Sesión iniciada como ${AUTHORIZED_ADMIN_EMAIL}.`, false);
     showAdminPanel();
     renderAdminProducts();
+    await loadAdminOrders();
   } catch (error) {
     console.warn('No fue posible autenticar el admin en Firebase.', error);
     sessionStorage.removeItem('adminAuthenticated');
@@ -739,6 +755,110 @@ function renderAdminProducts() {
     `;
     grid.appendChild(card);
   });
+}
+
+function getAdminOrdersStatusElement() {
+  return document.getElementById('admin-orders-status');
+}
+
+function setAdminOrdersStatus(message, isError = false) {
+  const statusElement = getAdminOrdersStatusElement();
+  if (!statusElement) return;
+  statusElement.textContent = message;
+  statusElement.classList.toggle('text-red-600', isError);
+  statusElement.classList.toggle('text-gray-500', !isError);
+}
+
+function getOrderStatusLabel(status) {
+  const normalizedStatus = normalizeTextValue(status).replace(/-/g, '_');
+  switch (normalizedStatus) {
+    case 'authorized': return 'Pagada';
+    case 'created': return 'Creada';
+    case 'failed': return 'Fallida';
+    case 'aborted': return 'Abortada';
+    case 'timeout': return 'Expirada';
+    case 'paid_manual_review': return 'Revisión manual';
+    case 'paid_validation_error': return 'Error de validación';
+    case 'error': return 'Error';
+    default: return status || 'Sin estado';
+  }
+}
+
+function getOrderStatusClasses(status) {
+  const normalizedStatus = normalizeTextValue(status).replace(/-/g, '_');
+  switch (normalizedStatus) {
+    case 'authorized': return 'bg-emerald-100 text-emerald-800';
+    case 'created': return 'bg-slate-100 text-slate-700';
+    case 'failed':
+    case 'error': return 'bg-red-100 text-red-800';
+    case 'aborted':
+    case 'timeout': return 'bg-amber-100 text-amber-800';
+    case 'paid_manual_review':
+    case 'paid_validation_error': return 'bg-sky-100 text-sky-800';
+    default: return 'bg-slate-100 text-slate-700';
+  }
+}
+
+function formatOrderDate(timestampMs, fallbackIsoDate = '') {
+  const timestamp = Number(timestampMs) || Date.parse(fallbackIsoDate) || 0;
+  if (!timestamp) return 'Sin fecha';
+  return new Date(timestamp).toLocaleString('es-CL');
+}
+
+function renderAdminOrders() {
+  const grid = document.getElementById('admin-orders-grid');
+  if (!grid) return;
+
+  if (adminOrders.length === 0) {
+    grid.innerHTML = '<p class="text-gray-400 text-center py-4">No hay órdenes registradas todavía.</p>';
+    setAdminOrdersStatus('Sin órdenes registradas.', false);
+    return;
+  }
+
+  grid.innerHTML = adminOrders.map(order => {
+    const customer = order.customer || {};
+    const items = Array.isArray(order.items) ? order.items : [];
+    const transbank = order.transbank || {};
+    const lastResponse = transbank.lastResponse || {};
+    const itemSummary = items.slice(0, 3).map(item => `${item.name} x${item.qty}`).join(' | ');
+    const extraItems = items.length > 3 ? ` (+${items.length - 3} más)` : '';
+    return `
+      <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="text-sm font-semibold text-slate-900">${order.buyOrder || order.id}</span>
+              <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getOrderStatusClasses(order.status)}">${getOrderStatusLabel(order.status)}</span>
+            </div>
+            <div class="text-sm text-gray-700">Cliente: <span class="font-medium">${customer.name || 'Sin nombre'}</span> · ${customer.email || 'Sin correo'} · ${customer.phone || 'Sin teléfono'}</div>
+            <div class="text-sm text-gray-600 mt-1">Total: <span class="font-semibold text-slate-900">$${(Number(order.amount) || 0).toLocaleString('es-CL')}</span> · Fecha: ${formatOrderDate(order.createdAtMs, lastResponse.transactionDate)}</div>
+            <div class="text-sm text-gray-600 mt-1">Productos: ${itemSummary || 'Sin detalle'}${extraItems}</div>
+            <div class="text-xs text-gray-500 mt-2">Autorización: ${lastResponse.authorizationCode || 'Sin autorización'} · Tarjeta: ${lastResponse.cardNumber ? `**** ${lastResponse.cardNumber}` : 'Sin dato'} · Tipo: ${lastResponse.paymentTypeCode || 'Sin dato'}</div>
+            ${order.manualReviewReason ? `<div class="text-xs text-sky-700 mt-2">Revisión: ${order.manualReviewReason}</div>` : ''}
+            ${order.errorMessage ? `<div class="text-xs text-red-700 mt-2">Error: ${order.errorMessage}</div>` : ''}
+          </div>
+        </div>
+      </article>
+    `;
+  }).join('');
+
+  setAdminOrdersStatus(`Mostrando ${adminOrders.length} órdenes.`, false);
+}
+
+async function loadAdminOrders() {
+  setAdminOrdersStatus('Cargando órdenes...', false);
+  try {
+    adminOrders = await fetchOrdersFromFirestore();
+    renderAdminOrders();
+  } catch (error) {
+    console.warn('No fue posible cargar las órdenes del admin.', error);
+    adminOrders = [];
+    const grid = document.getElementById('admin-orders-grid');
+    if (grid) {
+      grid.innerHTML = '<p class="text-red-500 text-center py-4">No fue posible cargar las órdenes.</p>';
+    }
+    setAdminOrdersStatus(error.message || 'No fue posible cargar las órdenes.', true);
+  }
 }
 
 function renderAdminAdditionalCategories(selectedValues = []) {
@@ -942,6 +1062,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   const categorySelect = document.getElementById('product-category');
   const additionalCategoriesContainer = document.getElementById('product-additional-categories');
   const adminProductSearchInput = document.getElementById('admin-product-search');
+  const refreshOrdersButton = document.getElementById('refresh-orders-btn');
 
   categorySelect?.addEventListener('change', () => {
     const currentAssignments = getSelectedAdminCategoryCatalogAssignments();
@@ -957,6 +1078,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   adminProductSearchInput?.addEventListener('input', event => {
     adminProductSearchTerm = normalizeTextValue(event.target.value);
     renderAdminProducts();
+  });
+
+  refreshOrdersButton?.addEventListener('click', async () => {
+    await loadAdminOrders();
   });
 
   renderAdminAdditionalCategories([]);
@@ -988,6 +1113,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   if (sessionStorage.getItem('adminAuthenticated') === 'true') {
     showAdminPanel();
     renderAdminProducts();
+    await loadAdminOrders();
     return;
   }
 
