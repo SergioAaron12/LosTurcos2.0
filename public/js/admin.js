@@ -179,6 +179,17 @@ function getCatalogConfigByCategory(category) {
   return CATEGORY_CONFIG_BY_CATEGORY.get(normalizeTextValue(category)) || null;
 }
 
+function getCanonicalCategoryValue(category) {
+  return getCatalogConfigByCategory(category)?.category || String(category || '').trim();
+}
+
+function getManagedCategoryOptions() {
+  return CATEGORY_CATALOG_CONFIGS.map(config => ({
+    value: config.category,
+    label: config.displayName
+  }));
+}
+
 function getCatalogLabelsForConfig(config) {
   if (!config) return [];
   return [...new Set(config.groups.flatMap(group => group.items || []))];
@@ -224,51 +235,127 @@ function getCatalogEntryByToken(config, token) {
   return getCatalogEntriesForConfig(config).find(entry => entry.token === token) || null;
 }
 
-function normalizeCatalogAssignments(product) {
-  const config = getCatalogConfigByCategory(product.category);
-  if (!config || getCatalogEntriesForConfig(config).length === 0) return [];
+function normalizeAdditionalCategories(product) {
+  const primaryCategory = getCanonicalCategoryValue(product.category);
+  const normalizedPrimary = normalizeTextValue(primaryCategory);
+  const categories = [];
 
-  const assignments = [];
-  const pushAssignment = value => {
-    const canonicalValue = getCanonicalCatalogToken(config, value);
-    if (canonicalValue && !assignments.includes(canonicalValue)) {
-      assignments.push(canonicalValue);
+  const pushCategory = value => {
+    const canonicalValue = getCanonicalCategoryValue(value);
+    if (!canonicalValue || normalizeTextValue(canonicalValue) === normalizedPrimary) {
+      return;
+    }
+
+    if (!categories.some(category => normalizeTextValue(category) === normalizeTextValue(canonicalValue))) {
+      categories.push(canonicalValue);
     }
   };
 
-  if (Array.isArray(product.catalogAssignments)) {
-    product.catalogAssignments.forEach(pushAssignment);
+  if (Array.isArray(product.additionalCategories)) {
+    product.additionalCategories.forEach(pushCategory);
   }
 
-  if (product.subcategory) {
-    pushAssignment(product.subcategory);
+  return categories;
+}
+
+function getProductCategories(product) {
+  const categories = [];
+  const pushCategory = value => {
+    const canonicalValue = getCanonicalCategoryValue(value);
+    if (!canonicalValue) return;
+    if (!categories.some(category => normalizeTextValue(category) === normalizeTextValue(canonicalValue))) {
+      categories.push(canonicalValue);
+    }
+  };
+
+  pushCategory(product.category);
+  normalizeAdditionalCategories(product).forEach(pushCategory);
+  return categories;
+}
+
+function getStoredAssignmentsForCategory(categoryCatalogAssignments, category) {
+  if (!categoryCatalogAssignments || typeof categoryCatalogAssignments !== 'object') {
+    return [];
   }
 
-  return assignments;
+  const match = Object.entries(categoryCatalogAssignments).find(([key]) => normalizeTextValue(key) === normalizeTextValue(category));
+  return Array.isArray(match?.[1]) ? match[1] : [];
+}
+
+function normalizeCategoryCatalogAssignments(product, categories = getProductCategories(product)) {
+  const assignmentsByCategory = {};
+
+  categories.forEach(category => {
+    const config = getCatalogConfigByCategory(category);
+    if (!config || getCatalogEntriesForConfig(config).length === 0) {
+      return;
+    }
+
+    const assignments = [];
+    const pushAssignment = value => {
+      const canonicalValue = getCanonicalCatalogToken(config, value);
+      if (canonicalValue && !assignments.includes(canonicalValue)) {
+        assignments.push(canonicalValue);
+      }
+    };
+
+    const storedAssignments = getStoredAssignmentsForCategory(product.categoryCatalogAssignments, category);
+    storedAssignments.forEach(pushAssignment);
+
+    if (normalizeTextValue(category) === normalizeTextValue(product.category)) {
+      if (Array.isArray(product.catalogAssignments)) {
+        product.catalogAssignments.forEach(pushAssignment);
+      }
+
+      if (product.subcategory) {
+        pushAssignment(product.subcategory);
+      }
+    }
+
+    if (assignments.length > 0) {
+      assignmentsByCategory[config.category] = assignments;
+    }
+  });
+
+  return assignmentsByCategory;
 }
 
 function getDisplayCategoryName(category) {
   return getCatalogConfigByCategory(category)?.displayName || category || 'Sin categoria';
 }
 
-function getProductCatalogLabels(product) {
-  const config = getCatalogConfigByCategory(product.category);
-  return Array.isArray(product.catalogAssignments)
-    ? product.catalogAssignments
-      .map(token => getCatalogEntryByToken(config, token)?.displayLabel || '')
-      .filter(Boolean)
-    : [];
+function getProductCategoryNames(product) {
+  return getProductCategories(product).map(category => getDisplayCategoryName(category));
+}
+
+function getProductCatalogTokens(product, category = product.category) {
+  return getStoredAssignmentsForCategory(product.categoryCatalogAssignments, category).filter(Boolean);
+}
+
+function getProductCatalogLabels(product, category = product.category) {
+  const config = getCatalogConfigByCategory(category);
+  return getProductCatalogTokens(product, category)
+    .map(token => getCatalogEntryByToken(config, token)?.displayLabel || '')
+    .filter(Boolean);
+}
+
+function getAllProductCatalogLabels(product) {
+  return getProductCategories(product).flatMap(category => (
+    getProductCatalogLabels(product, category).map(label => `${getDisplayCategoryName(category)} / ${label}`)
+  ));
 }
 
 function getProductCategoryLabel(product) {
-  const catalogLabels = getProductCatalogLabels(product);
+  const displayCategories = getProductCategoryNames(product);
+  const catalogLabels = getProductCatalogLabels(product, product.category);
   const displayName = getDisplayCategoryName(product.category);
 
-  if (catalogLabels.length > 0) {
-    return `${displayName} / ${catalogLabels.join(', ')}`;
+  let label = catalogLabels.length > 0 ? `${displayName} / ${catalogLabels.join(', ')}` : displayName;
+  if (displayCategories.length > 1) {
+    label += ` + ${displayCategories.slice(1).join(', ')}`;
   }
 
-  return displayName;
+  return label;
 }
 
 function loadFirebaseScript(src) {
@@ -319,14 +406,18 @@ function initFirebaseApp() {
 
 function normalizeProduct(product) {
   const legacyShowcase = product.showcase || 'index';
-  const category = product.category || '';
-  const catalogAssignments = normalizeCatalogAssignments(product);
+  const category = getCanonicalCategoryValue(product.category || '');
+  const additionalCategories = normalizeAdditionalCategories({ ...product, category });
+  const categoryCatalogAssignments = normalizeCategoryCatalogAssignments({ ...product, category, additionalCategories });
+  const catalogAssignments = getStoredAssignmentsForCategory(categoryCatalogAssignments, category);
   return {
     id: Number(product.id),
     name: product.name || '',
     price: Number(product.price) || 0,
     stock: Number(product.stock) || 0,
     category,
+    additionalCategories,
+    categoryCatalogAssignments,
     catalogAssignments,
     subcategory: catalogAssignments[0] || '',
     discount: Number(product.discount) || 0,
@@ -505,8 +596,8 @@ function renderAdminProducts() {
         <div class="font-bold">${p.name}</div>
         <div>Stock: ${stockStatus}</div>
         <div>Precio: $${p.price.toLocaleString('es-CL')}</div>
-        <div>Categoría: ${getProductCategoryLabel(p)}</div>
-        <div>Catálogos: ${getProductCatalogLabels(p).join(' | ') || 'Sin catálogos específicos'}</div>
+        <div>Categorías: ${getProductCategoryNames(p).join(' | ')}</div>
+        <div>Catálogos: ${getAllProductCatalogLabels(p).join(' | ') || 'Sin catálogos específicos'}</div>
         <div>Descuento: ${p.discount || 0}%</div>
         <div>Se muestra en: ${visibility}</div>
       </div>
@@ -517,38 +608,93 @@ function renderAdminProducts() {
   });
 }
 
-function renderAdminCatalogAssignments(selectedValues = []) {
-  const wrapper = document.getElementById('product-catalog-assignments-wrapper');
-  const container = document.getElementById('product-catalog-assignments');
+function renderAdminAdditionalCategories(selectedValues = []) {
+  const wrapper = document.getElementById('product-additional-categories-wrapper');
+  const container = document.getElementById('product-additional-categories');
   const categorySelect = document.getElementById('product-category');
   if (!wrapper || !container || !categorySelect) return;
 
-  const config = getCatalogConfigByCategory(categorySelect.value);
-  if (!config || config.groups.length === 0) {
+  const primaryCategory = getCanonicalCategoryValue(categorySelect.value);
+  if (!primaryCategory) {
     wrapper.classList.add('hidden');
     container.innerHTML = '';
     return;
   }
 
   const selectedSet = new Set(selectedValues.map(value => normalizeTextValue(value)));
-  container.innerHTML = config.groups.map((group, groupIndex) => `
-    <div class="catalog-assignment-group">
-      <div class="catalog-assignment-group__title">${group.title}</div>
-      <div class="catalog-assignment-group__options">
-        ${group.items.map((item, itemIndex) => {
-          const inputId = `product-catalog-${groupIndex}-${itemIndex}`;
-          const token = buildCatalogToken(group.title, item);
-          const checked = selectedSet.has(normalizeTextValue(token)) ? 'checked' : '';
-          return `<label class="catalog-assignment-option" for="${inputId}"><input id="${inputId}" type="checkbox" name="product-catalog-assignment" value="${token}" ${checked} /><span>${item}</span></label>`;
-        }).join('')}
-      </div>
-    </div>
-  `).join('');
+  container.innerHTML = getManagedCategoryOptions()
+    .filter(option => normalizeTextValue(option.value) !== normalizeTextValue(primaryCategory))
+    .map((option, index) => {
+      const inputId = `product-additional-category-${index}`;
+      const checked = selectedSet.has(normalizeTextValue(option.value)) ? 'checked' : '';
+      return `<label class="catalog-assignment-option" for="${inputId}"><input id="${inputId}" type="checkbox" name="product-additional-category" value="${option.value}" ${checked} /><span>${option.label}</span></label>`;
+    }).join('');
+
   wrapper.classList.remove('hidden');
 }
 
-function getSelectedAdminCatalogAssignments() {
-  return Array.from(document.querySelectorAll('input[name="product-catalog-assignment"]:checked')).map(input => input.value);
+function getSelectedAdminAdditionalCategories() {
+  return Array.from(document.querySelectorAll('input[name="product-additional-category"]:checked')).map(input => input.value);
+}
+
+function getSelectedAdminCategories() {
+  const primaryCategory = getCanonicalCategoryValue(document.getElementById('product-category')?.value);
+  return primaryCategory ? [primaryCategory].concat(getSelectedAdminAdditionalCategories()) : [];
+}
+
+function renderAdminCatalogAssignments(selectedAssignments = {}) {
+  const wrapper = document.getElementById('product-catalog-assignments-wrapper');
+  const container = document.getElementById('product-catalog-assignments');
+  if (!wrapper || !container) return;
+
+  const selectedCategories = getSelectedAdminCategories();
+  const sections = selectedCategories.map(category => {
+    const config = getCatalogConfigByCategory(category);
+    if (!config || config.groups.length === 0) {
+      return '';
+    }
+
+    const selectedSet = new Set(getStoredAssignmentsForCategory(selectedAssignments, category).map(value => normalizeTextValue(value)));
+    return `
+      <div class="catalog-assignment-group">
+        <div class="catalog-assignment-category-heading">${getDisplayCategoryName(category)}</div>
+        ${config.groups.map((group, groupIndex) => `
+          <div class="${groupIndex > 0 ? 'mt-3' : ''}">
+            <div class="catalog-assignment-group__title">${group.title}</div>
+            <div class="catalog-assignment-group__options">
+              ${group.items.map((item, itemIndex) => {
+                const inputId = `product-catalog-${normalizeTextValue(category).replace(/[^a-z0-9]+/g, '-')}-${groupIndex}-${itemIndex}`;
+                const token = buildCatalogToken(group.title, item);
+                const checked = selectedSet.has(normalizeTextValue(token)) ? 'checked' : '';
+                return `<label class="catalog-assignment-option" for="${inputId}"><input id="${inputId}" type="checkbox" name="product-catalog-assignment" data-category="${category}" value="${token}" ${checked} /><span>${item}</span></label>`;
+              }).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }).filter(Boolean);
+
+  if (sections.length === 0) {
+    wrapper.classList.add('hidden');
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = sections.join('');
+  wrapper.classList.remove('hidden');
+}
+
+function getSelectedAdminCategoryCatalogAssignments() {
+  return Array.from(document.querySelectorAll('input[name="product-catalog-assignment"]:checked')).reduce((accumulator, input) => {
+    const category = getCanonicalCategoryValue(input.dataset.category || '');
+    if (!category) return accumulator;
+    if (!accumulator[category]) {
+      accumulator[category] = [];
+    }
+    accumulator[category].push(input.value);
+    return accumulator;
+  }, {});
 }
 
 function resetForm() {
@@ -557,11 +703,12 @@ function resetForm() {
   document.getElementById('product-price').value = '';
   document.getElementById('product-stock').value = '';
   document.getElementById('product-category').value = '';
+  renderAdminAdditionalCategories([]);
   document.getElementById('product-discount').value = '';
   document.getElementById('product-img').value = '';
   document.getElementById('product-details').value = '';
   document.getElementById('product-img-file').value = '';
-  renderAdminCatalogAssignments([]);
+  renderAdminCatalogAssignments({});
   const showInOffers = document.getElementById('product-show-in-offers');
   const showInNew = document.getElementById('product-show-in-new');
   if (showInOffers) showInOffers.checked = false;
@@ -576,11 +723,12 @@ function editProduct(id) {
   document.getElementById('product-price').value = prod.price;
   document.getElementById('product-stock').value = prod.stock || 0;
   document.getElementById('product-category').value = prod.category || '';
+  renderAdminAdditionalCategories(prod.additionalCategories || []);
   document.getElementById('product-discount').value = prod.discount || 0;
   document.getElementById('product-img').value = prod.img;
   document.getElementById('product-details').value = prod.details || '';
   document.getElementById('product-img-file').value = '';
-  renderAdminCatalogAssignments(getProductCatalogLabels(prod));
+  renderAdminCatalogAssignments(prod.categoryCatalogAssignments || {});
   const showInOffers = document.getElementById('product-show-in-offers');
   const showInNew = document.getElementById('product-show-in-new');
   if (showInOffers) showInOffers.checked = flags.showInOffers;
@@ -606,8 +754,10 @@ document.getElementById('product-form').onsubmit = function(e) {
   const price = parseInt(document.getElementById('product-price').value);
   const stockValue = document.getElementById('product-stock').value.trim();
   const stock = Number.parseInt(stockValue, 10);
-  const category = document.getElementById('product-category').value;
-  const catalogAssignments = getSelectedAdminCatalogAssignments();
+  const category = getCanonicalCategoryValue(document.getElementById('product-category').value);
+  const additionalCategories = getSelectedAdminAdditionalCategories();
+  const categoryCatalogAssignments = getSelectedAdminCategoryCatalogAssignments();
+  const catalogAssignments = getStoredAssignmentsForCategory(categoryCatalogAssignments, category);
   const discount = parseInt(document.getElementById('product-discount').value) || 0;
   const details = document.getElementById('product-details').value;
   let img = document.getElementById('product-img').value;
@@ -636,12 +786,12 @@ document.getElementById('product-form').onsubmit = function(e) {
       // Editar
       const idx = products.findIndex(p => p.id == id);
       if (idx > -1) {
-        products[idx] = stampProductUpdate({ ...products[idx], name, price, stock, category, catalogAssignments, subcategory: catalogAssignments[0] || '', discount, img, details, showcase: 'index', showInOffers, showInNew }, updatedAt);
+        products[idx] = stampProductUpdate({ ...products[idx], name, price, stock, category, additionalCategories, categoryCatalogAssignments, catalogAssignments, subcategory: catalogAssignments[0] || '', discount, img, details, showcase: 'index', showInOffers, showInNew }, updatedAt);
       }
     } else {
       // Nuevo
       const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
-      products.push(stampProductUpdate({ id: newId, name, price, stock, category, catalogAssignments, subcategory: catalogAssignments[0] || '', discount, img, details, showcase: 'index', showInOffers, showInNew }, updatedAt));
+      products.push(stampProductUpdate({ id: newId, name, price, stock, category, additionalCategories, categoryCatalogAssignments, catalogAssignments, subcategory: catalogAssignments[0] || '', discount, img, details, showcase: 'index', showInOffers, showInNew }, updatedAt));
     }
     saveProducts();
     showAdminPanel();
@@ -653,8 +803,22 @@ document.getElementById('product-form').onsubmit = function(e) {
 document.addEventListener('DOMContentLoaded', async function() {
   await hydrateProductsFromFirestore();
 
-  document.getElementById('product-category')?.addEventListener('change', () => renderAdminCatalogAssignments([]));
-  renderAdminCatalogAssignments([]);
+  const categorySelect = document.getElementById('product-category');
+  const additionalCategoriesContainer = document.getElementById('product-additional-categories');
+
+  categorySelect?.addEventListener('change', () => {
+    const currentAssignments = getSelectedAdminCategoryCatalogAssignments();
+    renderAdminAdditionalCategories(getSelectedAdminAdditionalCategories());
+    renderAdminCatalogAssignments(currentAssignments);
+  });
+
+  additionalCategoriesContainer?.addEventListener('change', () => {
+    const currentAssignments = getSelectedAdminCategoryCatalogAssignments();
+    renderAdminCatalogAssignments(currentAssignments);
+  });
+
+  renderAdminAdditionalCategories([]);
+  renderAdminCatalogAssignments({});
 
   document.getElementById('logout-btn').addEventListener('click', function(e) {
     e.preventDefault();

@@ -423,6 +423,13 @@ form[onsubmit*='buscarProductos'] button[type='submit']:hover {
   font-weight: 700;
 }
 
+.catalog-assignment-category-heading {
+  margin-bottom: 0.75rem;
+  color: var(--dark-royal);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
 .catalog-assignment-group__options {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

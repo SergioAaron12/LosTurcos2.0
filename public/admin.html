@@ -33,7 +33,7 @@
           <p class="text-xs text-gray-500 mt-1">Ingresa la cantidad disponible. Si guardas 0, el producto se mostrará como agotado en la tienda.</p>
         </div>
         <div class="mb-2">
-          <label>Categoría:
+          <label>Categoría principal:
             <select id="product-category" class="border rounded px-2 py-1 w-full" required>
               <option value="">Selecciona una categoría</option>
               <option value="Aseo">Aseo</option>
@@ -59,9 +59,14 @@
             </select>
           </label>
         </div>
+        <div id="product-additional-categories-wrapper" class="mb-3 hidden rounded-lg border border-gray-200 p-3 bg-gray-50">
+          <div class="font-medium text-sm text-gray-700 mb-2">Mostrar también en otras categorías</div>
+          <p class="text-xs text-gray-500 mb-3">Usa esto cuando el mismo producto deba aparecer en más de una página de categoría.</p>
+          <div id="product-additional-categories" class="catalog-assignment-group__options"></div>
+        </div>
         <div id="product-catalog-assignments-wrapper" class="mb-3 hidden rounded-lg border border-gray-200 p-3 bg-gray-50">
-          <div class="font-medium text-sm text-gray-700 mb-2">Catálogos del producto</div>
-          <p class="text-xs text-gray-500 mb-3">Puedes asignar el mismo producto a varios catálogos dentro de su categoría.</p>
+          <div class="font-medium text-sm text-gray-700 mb-2">Catálogos por categoría</div>
+          <p class="text-xs text-gray-500 mb-3">Puedes asignar catálogos distintos para cada categoría donde se mostrará el producto.</p>
           <div id="product-catalog-assignments" class="catalog-assignment-list"></div>
         </div>
         <div class="mb-2"><label>Descuento (%): <input id="product-discount" type="number" min="0" max="100" class="border rounded px-2 py-1 w-full" /></label></div>
