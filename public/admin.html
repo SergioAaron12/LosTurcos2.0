@@ -13,11 +13,14 @@
   <div class="max-w-2xl mx-auto px-4 py-8 md:py-10">
     <h1 class="text-3xl font-bold mb-8 text-center text-gold-lux">Modo Administrador</h1>
     <div id="admin-auth" class="mb-8 text-center">
+      <div class="mb-3 text-sm text-gray-600">Acceso protegido con Firebase Auth para la cuenta administradora autorizada.</div>
       <div class="flex flex-col sm:flex-row gap-3 justify-center">
-        <input id="admin-password" type="password" placeholder="Contraseña de administrador" class="border rounded px-3 py-2 w-full sm:w-auto sm:min-w-[280px]" />
+        <input id="admin-email" type="email" value="elsakitodewea@gmail.com" placeholder="Correo administrador" class="border rounded px-3 py-2 w-full sm:w-auto sm:min-w-[280px]" />
+        <input id="admin-password" type="password" placeholder="Contraseña de Firebase Auth" class="border rounded px-3 py-2 w-full sm:w-auto sm:min-w-[280px]" />
         <button onclick="checkAdminPassword()" class="px-3 py-2 bg-blue-600 text-white rounded w-full sm:w-auto">Entrar</button>
       </div>
-      <div id="admin-auth-error" class="text-red-600 mt-2 text-sm hidden">Contraseña incorrecta</div>
+      <div id="admin-auth-status" class="text-gray-500 mt-2 text-sm">Debes iniciar sesión con la cuenta administradora para guardar cambios en Firestore.</div>
+      <div id="admin-auth-error" class="text-red-600 mt-2 text-sm hidden">No fue posible iniciar sesión como administrador.</div>
     </div>
     <div id="admin-panel" class="hidden">
       <div class="flex flex-col sm:flex-row gap-3 justify-between mb-4">
@@ -91,6 +94,10 @@
         </div>
       </form>
       <h2 class="text-xl font-bold mb-4">Productos</h2>
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="admin-product-search">Buscar en productos cargados</label>
+        <input id="admin-product-search" type="search" placeholder="Nombre, categoría, catálogo, precio o stock" class="border rounded px-3 py-2 w-full bg-white" />
+      </div>
       <div id="admin-products-grid"></div>
     </div>
   </div>

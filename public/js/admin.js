@@ -7,6 +7,8 @@ const FIREBASE_CONFIG = {
   appId: '1:353259282248:web:212a5dbe7ee28ed5cedd7d'
 };
 
+const AUTHORIZED_ADMIN_EMAIL = 'elsakitodewea@gmail.com';
+
 const FIRESTORE_PRODUCTS_COLLECTION = 'products';
 const CATEGORY_CATALOG_CONFIGS = [
   {
@@ -170,6 +172,7 @@ const CATEGORY_CATALOG_CONFIGS = [
 ];
 const CATEGORY_CONFIG_BY_CATEGORY = new Map(CATEGORY_CATALOG_CONFIGS.map(config => [normalizeTextValue(config.category), config]));
 let firebaseAppReadyPromise = null;
+let adminProductSearchTerm = '';
 
 function normalizeTextValue(value) {
   return String(value || '').trim().toLowerCase();
@@ -388,7 +391,8 @@ function initFirebaseApp() {
 
   firebaseAppReadyPromise = Promise.all([
     loadFirebaseScript('https://www.gstatic.com/firebasejs/12.12.0/firebase-app-compat.js'),
-    loadFirebaseScript('https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore-compat.js')
+    loadFirebaseScript('https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore-compat.js'),
+    loadFirebaseScript('https://www.gstatic.com/firebasejs/12.12.0/firebase-auth-compat.js')
   ]).then(() => {
     if (!window.firebase) {
       throw new Error('Firebase no quedó disponible en ventana global.');
@@ -402,6 +406,57 @@ function initFirebaseApp() {
   });
 
   return firebaseAppReadyPromise;
+}
+
+function getAdminAuthErrorElement() {
+  return document.getElementById('admin-auth-error');
+}
+
+function getAdminAuthStatusElement() {
+  return document.getElementById('admin-auth-status');
+}
+
+function setAdminAuthError(message = '') {
+  const errorElement = getAdminAuthErrorElement();
+  if (!errorElement) return;
+  errorElement.textContent = message;
+  errorElement.classList.toggle('hidden', !message);
+}
+
+function setAdminAuthStatus(message, isError = false) {
+  const statusElement = getAdminAuthStatusElement();
+  if (!statusElement) return;
+  statusElement.textContent = message;
+  statusElement.classList.toggle('text-gray-500', !isError);
+  statusElement.classList.toggle('text-amber-600', isError);
+}
+
+function isAuthorizedAdminUser(user) {
+  return Boolean(
+    user &&
+    user.emailVerified &&
+    normalizeTextValue(user.email) === normalizeTextValue(AUTHORIZED_ADMIN_EMAIL)
+  );
+}
+
+async function signInAdminWithEmailPassword(email, password) {
+  await initFirebaseApp();
+  const auth = window.firebase.auth();
+  const credentials = await auth.signInWithEmailAndPassword(email, password);
+
+  if (!isAuthorizedAdminUser(credentials.user)) {
+    await auth.signOut();
+    throw new Error('La cuenta no corresponde a un administrador autorizado o el correo no está verificado.');
+  }
+
+  return credentials.user;
+}
+
+async function getCurrentAuthorizedAdminUser() {
+  await initFirebaseApp();
+  const auth = window.firebase.auth();
+  const user = auth.currentUser;
+  return isAuthorizedAdminUser(user) ? user : null;
 }
 
 function normalizeProduct(product) {
@@ -449,6 +504,14 @@ function getProductDisplayFlags(product) {
   };
 }
 
+function chunkArray(items, chunkSize) {
+  const chunks = [];
+  for (let index = 0; index < items.length; index += chunkSize) {
+    chunks.push(items.slice(index, index + chunkSize));
+  }
+  return chunks;
+}
+
 async function fetchProductsFromFirestore() {
   const db = await initFirebaseApp();
   const snapshot = await db.collection(FIRESTORE_PRODUCTS_COLLECTION).get();
@@ -457,24 +520,51 @@ async function fetchProductsFromFirestore() {
     .sort((left, right) => left.id - right.id);
 }
 
-async function persistProductsToFirestore(productList) {
+async function syncProductsToFirestore(productList) {
   const db = await initFirebaseApp();
-  const batch = db.batch();
   const snapshot = await db.collection(FIRESTORE_PRODUCTS_COLLECTION).get();
-  const incomingIds = new Set(productList.map(product => String(product.id)));
+  const incomingProducts = productList.map(product => normalizeProduct(product));
+  const incomingIds = new Set(incomingProducts.map(product => String(product.id)));
+  const operations = [];
 
   snapshot.forEach(doc => {
     if (!incomingIds.has(doc.id)) {
-      batch.delete(doc.ref);
+      operations.push({ type: 'delete', ref: doc.ref });
     }
   });
 
-  productList.forEach(product => {
-    const normalized = normalizeProduct(product);
-    batch.set(db.collection(FIRESTORE_PRODUCTS_COLLECTION).doc(String(normalized.id)), normalized);
+  incomingProducts.forEach(product => {
+    operations.push({
+      type: 'set',
+      ref: db.collection(FIRESTORE_PRODUCTS_COLLECTION).doc(String(product.id)),
+      data: product
+    });
   });
 
-  await batch.commit();
+  const MAX_BATCH_OPERATIONS = 450;
+  for (const batchOperations of chunkArray(operations, MAX_BATCH_OPERATIONS)) {
+    const batch = db.batch();
+    batchOperations.forEach(operation => {
+      if (operation.type === 'delete') {
+        batch.delete(operation.ref);
+        return;
+      }
+
+      batch.set(operation.ref, operation.data);
+    });
+    await batch.commit();
+  }
+}
+
+async function persistProductToFirestore(product) {
+  const db = await initFirebaseApp();
+  const normalized = normalizeProduct(product);
+  await db.collection(FIRESTORE_PRODUCTS_COLLECTION).doc(String(normalized.id)).set(normalized);
+}
+
+async function deleteProductFromFirestore(productId) {
+  const db = await initFirebaseApp();
+  await db.collection(FIRESTORE_PRODUCTS_COLLECTION).doc(String(productId)).delete();
 }
 
 async function hydrateProductsFromFirestore() {
@@ -488,7 +578,7 @@ async function hydrateProductsFromFirestore() {
     if (localProducts.length > 0 && localVersion > remoteVersion) {
       products = localProducts;
       localStorage.setItem('products', JSON.stringify(products));
-      await persistProductsToFirestore(products);
+      await syncProductsToFirestore(products);
       return;
     }
 
@@ -501,7 +591,7 @@ async function hydrateProductsFromFirestore() {
     products = localProducts;
     localStorage.setItem('products', JSON.stringify(products));
     if (products.length > 0) {
-      await persistProductsToFirestore(products);
+      await syncProductsToFirestore(products);
     }
   } catch (error) {
     console.warn('No se pudo sincronizar productos con Firestore. Se usará almacenamiento local.', error);
@@ -550,22 +640,58 @@ function syncProductsFromStorage() {
 
 let products = getInitialProducts();
 
-function saveProducts() {
+function saveProducts(remoteOperation) {
   localStorage.setItem('products', JSON.stringify(products));
-  persistProductsToFirestore(products).catch(error => {
+  const operation = remoteOperation || syncProductsToFirestore(products);
+  operation.catch(error => {
     console.warn('No se pudo guardar productos en Firestore.', error);
   });
 }
 
-function checkAdminPassword() {
-  const pass = document.getElementById('admin-password').value;
-  if (pass === 'Brujit@31$') {
+function productMatchesAdminSearch(product, query) {
+  if (!query) return true;
+
+  const searchableValues = [
+    product.name,
+    product.category,
+    ...getProductCategoryNames(product),
+    ...getAllProductCatalogLabels(product),
+    String(product.price || ''),
+    String(product.stock || ''),
+    product.details || ''
+  ];
+
+  return searchableValues.some(value => normalizeTextValue(value).includes(query));
+}
+
+async function checkAdminPassword() {
+  const email = document.getElementById('admin-email')?.value.trim() || '';
+  const password = document.getElementById('admin-password')?.value || '';
+
+  if (!email || !password) {
+    setAdminAuthError('Ingresa correo y contraseña de Firebase Auth.');
+    return;
+  }
+
+  if (normalizeTextValue(email) !== normalizeTextValue(AUTHORIZED_ADMIN_EMAIL)) {
+    setAdminAuthError(`Solo ${AUTHORIZED_ADMIN_EMAIL} puede administrar el catálogo.`);
+    return;
+  }
+
+  setAdminAuthError('');
+  setAdminAuthStatus('Iniciando sesión en Firebase...', false);
+
+  try {
+    await signInAdminWithEmailPassword(email, password);
     sessionStorage.setItem('adminAuthenticated', 'true');
-    document.getElementById('admin-auth-error').classList.add('hidden');
+    setAdminAuthStatus(`Sesión iniciada como ${AUTHORIZED_ADMIN_EMAIL}.`, false);
     showAdminPanel();
     renderAdminProducts();
-  } else {
-    document.getElementById('admin-auth-error').classList.remove('hidden');
+  } catch (error) {
+    console.warn('No fue posible autenticar el admin en Firebase.', error);
+    sessionStorage.removeItem('adminAuthenticated');
+    setAdminAuthError(error.message || 'No fue posible iniciar sesión como administrador.');
+    setAdminAuthStatus('Sin sesión válida de administrador en Firebase.', true);
   }
 }
 
@@ -577,7 +703,14 @@ function renderAdminProducts() {
     grid.innerHTML = '<p class="text-gray-400 text-center">No hay productos.</p>';
     return;
   }
-  products.forEach(p => {
+
+  const filteredProducts = products.filter(product => productMatchesAdminSearch(product, adminProductSearchTerm));
+  if (filteredProducts.length === 0) {
+    grid.innerHTML = '<p class="text-gray-400 text-center">No se encontraron productos para esta búsqueda.</p>';
+    return;
+  }
+
+  filteredProducts.forEach(p => {
     const flags = getProductDisplayFlags(p);
     const stock = Number(p.stock) || 0;
     const stockStatus = stock <= 0
@@ -740,7 +873,7 @@ function deleteProduct(id) {
     const idx = products.findIndex(p => p.id === id);
     if (idx > -1) {
       products.splice(idx, 1);
-      saveProducts();
+      saveProducts(deleteProductFromFirestore(id));
       renderAdminProducts();
       resetForm();
     }
@@ -782,18 +915,21 @@ document.getElementById('product-form').onsubmit = function(e) {
   }
   function saveProductData() {
     const updatedAt = Date.now();
+    let savedProduct = null;
     if (id) {
       // Editar
       const idx = products.findIndex(p => p.id == id);
       if (idx > -1) {
         products[idx] = stampProductUpdate({ ...products[idx], name, price, stock, category, additionalCategories, categoryCatalogAssignments, catalogAssignments, subcategory: catalogAssignments[0] || '', discount, img, details, showcase: 'index', showInOffers, showInNew }, updatedAt);
+        savedProduct = products[idx];
       }
     } else {
       // Nuevo
       const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
-      products.push(stampProductUpdate({ id: newId, name, price, stock, category, additionalCategories, categoryCatalogAssignments, catalogAssignments, subcategory: catalogAssignments[0] || '', discount, img, details, showcase: 'index', showInOffers, showInNew }, updatedAt));
+      savedProduct = stampProductUpdate({ id: newId, name, price, stock, category, additionalCategories, categoryCatalogAssignments, catalogAssignments, subcategory: catalogAssignments[0] || '', discount, img, details, showcase: 'index', showInOffers, showInNew }, updatedAt);
+      products.push(savedProduct);
     }
-    saveProducts();
+    saveProducts(savedProduct ? persistProductToFirestore(savedProduct) : undefined);
     showAdminPanel();
     renderAdminProducts();
     resetForm();
@@ -805,6 +941,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   const categorySelect = document.getElementById('product-category');
   const additionalCategoriesContainer = document.getElementById('product-additional-categories');
+  const adminProductSearchInput = document.getElementById('admin-product-search');
 
   categorySelect?.addEventListener('change', () => {
     const currentAssignments = getSelectedAdminCategoryCatalogAssignments();
@@ -817,12 +954,34 @@ document.addEventListener('DOMContentLoaded', async function() {
     renderAdminCatalogAssignments(currentAssignments);
   });
 
+  adminProductSearchInput?.addEventListener('input', event => {
+    adminProductSearchTerm = normalizeTextValue(event.target.value);
+    renderAdminProducts();
+  });
+
   renderAdminAdditionalCategories([]);
   renderAdminCatalogAssignments({});
 
-  document.getElementById('logout-btn').addEventListener('click', function(e) {
-    e.preventDefault();
+  const currentAdminUser = await getCurrentAuthorizedAdminUser();
+  if (currentAdminUser) {
+    sessionStorage.setItem('adminAuthenticated', 'true');
+    setAdminAuthStatus(`Sesión iniciada como ${currentAdminUser.email}.`, false);
+  } else {
     sessionStorage.removeItem('adminAuthenticated');
+    setAdminAuthStatus('Debes iniciar sesión con la cuenta administradora para guardar cambios en Firestore.', false);
+  }
+
+  document.getElementById('logout-btn').addEventListener('click', async function(e) {
+    e.preventDefault();
+    try {
+      await initFirebaseApp();
+      await window.firebase.auth().signOut();
+    } catch (error) {
+      console.warn('No fue posible cerrar la sesión de Firebase.', error);
+    }
+    sessionStorage.removeItem('adminAuthenticated');
+    setAdminAuthError('');
+    setAdminAuthStatus('Sesión cerrada. Debes iniciar sesión nuevamente para administrar.', false);
     showAdminLogin();
   });
 

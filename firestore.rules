@@ -1,10 +1,15 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Regla temporal para prototipo: permite leer y escribir productos desde la tienda.
-    // Conviene endurecer esto con Firebase Auth antes de producción.
+    function isAuthorizedAdmin() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == 'elsakitodewea@gmail.com';
+    }
+
     match /products/{productId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAuthorizedAdmin();
     }
 
     match /{document=**} {
