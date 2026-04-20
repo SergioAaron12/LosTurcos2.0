@@ -418,11 +418,37 @@ function getAdminAuthStatusElement() {
   return document.getElementById('admin-auth-status');
 }
 
+function getAdminAuthNoticeElement() {
+  return document.getElementById('admin-auth-notice');
+}
+
 function setAdminAuthError(message = '') {
   const errorElement = getAdminAuthErrorElement();
   if (!errorElement) return;
   errorElement.textContent = message;
   errorElement.classList.toggle('hidden', !message);
+}
+
+function clearAdminAuthNotice() {
+  const noticeElement = getAdminAuthNoticeElement();
+  if (!noticeElement) return;
+  noticeElement.textContent = '';
+  noticeElement.className = 'hidden mt-4 rounded-xl border px-4 py-4 text-left shadow-sm';
+}
+
+function setAdminAuthNotice(message, tone = 'info') {
+  const noticeElement = getAdminAuthNoticeElement();
+  if (!noticeElement) return;
+
+  const toneClassMap = {
+    info: 'mt-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-4 text-left text-sky-900 shadow-sm',
+    success: 'mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-left text-emerald-900 shadow-sm',
+    warning: 'mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-left text-amber-900 shadow-sm',
+    error: 'mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-left text-red-900 shadow-sm'
+  };
+
+  noticeElement.className = toneClassMap[tone] || toneClassMap.info;
+  noticeElement.textContent = message;
 }
 
 function setAdminAuthStatus(message, isError = false) {
@@ -441,17 +467,117 @@ function isAuthorizedAdminUser(user) {
   );
 }
 
-async function signInAdminWithEmailPassword(email, password) {
+function isAdminEmail(userOrEmail) {
+  const email = typeof userOrEmail === 'string' ? userOrEmail : userOrEmail?.email;
+  return normalizeTextValue(email) === normalizeTextValue(AUTHORIZED_ADMIN_EMAIL);
+}
+
+function buildAdminVerificationActionSettings() {
+  return {
+    url: `${window.location.origin}/admin.html`,
+    handleCodeInApp: false
+  };
+}
+
+async function sendVerificationEmailToUser(user) {
+  const auth = window.firebase.auth();
+  auth.languageCode = 'es';
+  await user.sendEmailVerification(buildAdminVerificationActionSettings());
+}
+
+async function signInForVerificationEmail(email, password) {
   await initFirebaseApp();
   const auth = window.firebase.auth();
   const credentials = await auth.signInWithEmailAndPassword(email, password);
 
-  if (!isAuthorizedAdminUser(credentials.user)) {
+  if (!isAdminEmail(credentials.user)) {
+    await auth.signOut();
+    throw new Error(`Solo ${AUTHORIZED_ADMIN_EMAIL} puede administrar el catálogo.`);
+  }
+
+  return credentials.user;
+}
+
+function mapAdminAuthError(error) {
+  switch (String(error?.code || '')) {
+    case 'auth/invalid-credential':
+    case 'auth/invalid-login-credentials':
+    case 'auth/wrong-password':
+      return 'La contraseña no es correcta para esa cuenta de Firebase Auth.';
+    case 'auth/user-not-found':
+      return 'Esa cuenta no existe todavía en Firebase Auth.';
+    case 'auth/too-many-requests':
+      return 'Firebase bloqueó temporalmente el acceso por demasiados intentos. Espera un momento e inténtalo de nuevo.';
+    case 'auth/network-request-failed':
+      return 'No se pudo contactar a Firebase. Revisa tu conexión e inténtalo nuevamente.';
+    default:
+      return error?.message || 'No fue posible completar la autenticación con Firebase.';
+  }
+}
+
+async function signInAdminWithEmailPassword(email, password) {
+  const auth = window.firebase.auth();
+  const user = await signInForVerificationEmail(email, password);
+
+  if (!user.emailVerified) {
+    try {
+      await sendVerificationEmailToUser(user);
+    } finally {
+      await auth.signOut();
+    }
+
+    const verificationError = new Error('La cuenta existe, pero el correo todavía no está verificado. Te reenviamos un correo de verificación. Revisa entrada, spam y promociones.');
+    verificationError.code = 'admin/email-not-verified';
+    throw verificationError;
+  }
+
+  if (!isAuthorizedAdminUser(user)) {
     await auth.signOut();
     throw new Error('La cuenta no corresponde a un administrador autorizado o el correo no está verificado.');
   }
 
-  return credentials.user;
+  return user;
+}
+
+async function resendAdminVerificationEmail() {
+  const email = document.getElementById('admin-email')?.value.trim() || '';
+  const password = document.getElementById('admin-password')?.value || '';
+
+  if (!email || !password) {
+    clearAdminAuthNotice();
+    setAdminAuthError('Ingresa correo y contraseña para reenviar la verificación.');
+    return;
+  }
+
+  if (!isAdminEmail(email)) {
+    clearAdminAuthNotice();
+    setAdminAuthError(`Solo ${AUTHORIZED_ADMIN_EMAIL} puede administrar el catálogo.`);
+    return;
+  }
+
+  setAdminAuthError('');
+  clearAdminAuthNotice();
+  setAdminAuthStatus('Solicitando correo de verificación a Firebase...', false);
+
+  try {
+    const user = await signInForVerificationEmail(email, password);
+    if (user.emailVerified) {
+      await window.firebase.auth().signOut();
+      setAdminAuthNotice('Ese correo ya está verificado. Si no puedes entrar, el problema ya no es la verificación: revisa la contraseña o si estás usando exactamente elsakitodewea@gmail.com.', 'success');
+      setAdminAuthStatus('Ese correo ya está verificado. Ya puedes iniciar sesión en el admin.', false);
+      return;
+    }
+
+    await sendVerificationEmailToUser(user);
+    await window.firebase.auth().signOut();
+    setAdminAuthNotice('Correo de verificación reenviado. Revisa entrada, spam y promociones. Cuando lo abras, vuelve al admin e inicia sesión de nuevo.', 'warning');
+    setAdminAuthStatus('Correo de verificación enviado. Revisa entrada, spam y promociones.', false);
+  } catch (error) {
+    console.warn('No fue posible reenviar la verificación del admin.', error);
+    clearAdminAuthNotice();
+    setAdminAuthError(mapAdminAuthError(error));
+    setAdminAuthStatus('No fue posible reenviar el correo de verificación.', true);
+  }
 }
 
 async function getCurrentAuthorizedAdminUser() {
@@ -694,6 +820,7 @@ async function checkAdminPassword() {
   }
 
   setAdminAuthError('');
+  clearAdminAuthNotice();
   setAdminAuthStatus('Iniciando sesión en Firebase...', false);
 
   try {
@@ -706,7 +833,12 @@ async function checkAdminPassword() {
   } catch (error) {
     console.warn('No fue posible autenticar el admin en Firebase.', error);
     sessionStorage.removeItem('adminAuthenticated');
-    setAdminAuthError(error.message || 'No fue posible iniciar sesión como administrador.');
+    if (error.code === 'admin/email-not-verified') {
+      setAdminAuthNotice('La cuenta existe pero todavía no está verificada. Ya se reenvió un correo automáticamente. Revisa entrada, spam y promociones, abre el enlace y luego vuelve a iniciar sesión.', 'warning');
+    } else {
+      clearAdminAuthNotice();
+    }
+    setAdminAuthError(mapAdminAuthError(error));
     setAdminAuthStatus('Sin sesión válida de administrador en Firebase.', true);
   }
 }
@@ -1063,6 +1195,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   const additionalCategoriesContainer = document.getElementById('product-additional-categories');
   const adminProductSearchInput = document.getElementById('admin-product-search');
   const refreshOrdersButton = document.getElementById('refresh-orders-btn');
+  const resendVerificationButton = document.getElementById('resend-verification-btn');
 
   categorySelect?.addEventListener('change', () => {
     const currentAssignments = getSelectedAdminCategoryCatalogAssignments();
@@ -1082,6 +1215,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   refreshOrdersButton?.addEventListener('click', async () => {
     await loadAdminOrders();
+  });
+
+  resendVerificationButton?.addEventListener('click', async () => {
+    await resendAdminVerificationEmail();
   });
 
   renderAdminAdditionalCategories([]);
@@ -1106,6 +1243,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     sessionStorage.removeItem('adminAuthenticated');
     setAdminAuthError('');
+    clearAdminAuthNotice();
     setAdminAuthStatus('Sesión cerrada. Debes iniciar sesión nuevamente para administrar.', false);
     showAdminLogin();
   });

@@ -18,7 +18,9 @@
         <input id="admin-email" type="email" value="elsakitodewea@gmail.com" placeholder="Correo administrador" class="border rounded px-3 py-2 w-full sm:w-auto sm:min-w-[280px]" />
         <input id="admin-password" type="password" placeholder="Contraseña de Firebase Auth" class="border rounded px-3 py-2 w-full sm:w-auto sm:min-w-[280px]" />
         <button onclick="checkAdminPassword()" class="px-3 py-2 bg-blue-600 text-white rounded w-full sm:w-auto">Entrar</button>
+        <button type="button" id="resend-verification-btn" class="px-3 py-2 bg-slate-700 text-white rounded w-full sm:w-auto">Reenviar verificación</button>
       </div>
+      <div id="admin-auth-notice" class="hidden mt-4 rounded-xl border px-4 py-4 text-left shadow-sm"></div>
       <div id="admin-auth-status" class="text-gray-500 mt-2 text-sm">Debes iniciar sesión con la cuenta administradora para guardar cambios en Firestore.</div>
       <div id="admin-auth-error" class="text-red-600 mt-2 text-sm hidden">No fue posible iniciar sesión como administrador.</div>
     </div>
