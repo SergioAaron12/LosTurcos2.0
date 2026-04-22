@@ -91,9 +91,10 @@
           </label>
         </div>
         <div class="flex flex-col sm:flex-row gap-2 mt-2">
-          <button type="submit" class="px-3 py-2 bg-blue-600 text-white rounded w-full sm:w-auto">Guardar</button>
+          <button type="submit" id="save-product-btn" class="px-3 py-2 bg-blue-600 text-white rounded w-full sm:w-auto">Guardar</button>
           <button type="button" onclick="resetForm()" class="px-3 py-2 bg-gray-400 text-white rounded w-full sm:w-auto">Limpiar</button>
         </div>
+        <div id="product-form-status" class="hidden mt-3 rounded-lg border px-3 py-2 text-sm"></div>
       </form>
       <h2 class="text-xl font-bold mb-4">Productos</h2>
       <div class="mb-4">

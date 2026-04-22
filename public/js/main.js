@@ -8,6 +8,7 @@ const FIREBASE_CONFIG = {
 };
 
 const FIRESTORE_PRODUCTS_COLLECTION = 'products';
+const LEGACY_PRODUCTS_STORAGE_KEY = 'products';
 const CATEGORY_CATALOG_CONFIGS = [
   {
     key: 'regalos',
@@ -172,6 +173,7 @@ const CATEGORY_CONFIG_BY_PAGE = new Map(CATEGORY_CATALOG_CONFIGS.map(config => [
 const CATEGORY_CONFIG_BY_CATEGORY = new Map(CATEGORY_CATALOG_CONFIGS.map(config => [normalizeTextValue(config.category), config]));
 let firebaseAppReadyPromise = null;
 let remoteProductsHydrationPromise = null;
+let legacyProductsBootstrapCache = null;
 
 function normalizeTextValue(value) {
   return String(value || '').trim().toLowerCase();
@@ -483,55 +485,30 @@ async function persistProductsToFirestore(productList) {
   await batch.commit();
 }
 
-function getDefaultProducts() {
-  return [
-    {id:5, name:'Alfombras Kilim pack 5 ud', price:285000, img:'https://picsum.photos/id/29/800/900', discount:18, category:'Textiles', stock:10},
-    {id:6, name:'Toallas Hammam pack 20 ud', price:145000, img:'https://picsum.photos/id/160/800/900', discount:0, category:'Textiles', stock:10},
-    {id:7, name:'Bata de Baño Turca', price:39000, img:'https://picsum.photos/id/1011/800/900', discount:5, category:'Textiles', stock:10},
-    {id:8, name:'Jabón Alepo Natural caja 50 ud', price:95000, img:'https://picsum.photos/id/201/800/900', discount:0, category:'Aseo', stock:10},
-    {id:9, name:'Jabón Líquido Perfumado caja 12 ud', price:35000, img:'https://picsum.photos/id/405/800/900', discount:0, category:'Aseo', stock:10},
-    {id:10, name:'Pasta Dental Premium pack 24 ud', price:45000, img:'https://picsum.photos/id/455/800/900', discount:5, category:'Aseo', stock:10},
-    {id:11, name:'Champú Natural Turco pack 10 ud', price:48000, img:'https://picsum.photos/id/420/800/900', discount:8, category:'Cuidado Capilar', stock:10},
-    {id:12, name:'Acondicionador Herbal pack 10 ud', price:52000, img:'https://picsum.photos/id/1025/800/900', discount:0, category:'Cuidado Capilar', stock:10},
-    {id:13, name:'Crema Corporal Humectante caja 24 ud', price:52000, img:'https://picsum.photos/id/435/800/900', discount:0, category:'Cuidado Adulto', stock:10},
-    {id:14, name:'Desodorante Spray pack 12 ud', price:38000, img:'https://picsum.photos/id/445/800/900', discount:0, category:'Cuidado Adulto', stock:10},
-    {id:15, name:'Loción Corporal Aromática caja 10 ud', price:62000, img:'https://picsum.photos/id/465/800/900', discount:0, category:'Cuidado Adulto', stock:10}
-  ];
+function clearLegacyProductsStorage() {
+  try {
+    localStorage.removeItem(LEGACY_PRODUCTS_STORAGE_KEY);
+  } catch (error) {
+    console.warn('No se pudo limpiar el cache legado de productos.', error);
+  }
 }
 
 async function hydrateProductsFromFirestore() {
   if (remoteProductsHydrationPromise) return remoteProductsHydrationPromise;
 
   remoteProductsHydrationPromise = (async () => {
-    const localProducts = getInitialProducts().map(normalizeProduct);
-
     try {
       const remoteProducts = await fetchProductsFromFirestore();
-      const localVersion = getProductsVersion(localProducts);
-      const remoteVersion = getProductsVersion(remoteProducts);
-
-      if (localProducts.length > 0 && localVersion > remoteVersion) {
-        products = localProducts;
-        localStorage.setItem('products', JSON.stringify(products));
-        await persistProductsToFirestore(products);
-        return;
-      }
 
       if (remoteProducts.length > 0) {
         products = remoteProducts;
-        localStorage.setItem('products', JSON.stringify(products));
         return;
       }
 
-      products = localProducts.length > 0 ? localProducts : getDefaultProducts();
-      localStorage.setItem('products', JSON.stringify(products));
-      if (products.length > 0) {
-        await persistProductsToFirestore(products);
-      }
+      products = [];
     } catch (error) {
-      console.warn('No se pudo sincronizar productos con Firestore. Se usará almacenamiento local.', error);
-      products = localProducts.length > 0 ? localProducts : getDefaultProducts();
-      localStorage.setItem('products', JSON.stringify(products));
+      console.warn('No se pudo cargar productos desde Firestore.', error);
+      products = [];
     }
   })();
 
@@ -540,8 +517,9 @@ async function hydrateProductsFromFirestore() {
 
 // Sincronizar products con localStorage
 function syncProductsFromStorage() {
-  const saved = localStorage.getItem('products');
-  products = saved ? JSON.parse(saved).map(normalizeProduct) : [];
+  if (!Array.isArray(products) || products.length === 0) {
+    products = getInitialProducts();
+  }
 }
 // Funciones principales JS para la tienda
 // Incluye: buscador, renderizado de productos, carrito, filtros, etc.
@@ -816,15 +794,14 @@ function initSearchSuggestions() {
   });
 }
 function getInitialProducts() {
-  const saved = localStorage.getItem('products');
-  if (saved) return JSON.parse(saved).map(normalizeProduct);
-  return getDefaultProducts().map(normalizeProduct);
+  legacyProductsBootstrapCache = [];
+  clearLegacyProductsStorage();
+  return [];
 }
 
 let products = getInitialProducts();
 
 function saveProducts() {
-  localStorage.setItem('products', JSON.stringify(products));
   persistProductsToFirestore(products).catch(error => {
     console.warn('No se pudo guardar productos en Firestore.', error);
   });

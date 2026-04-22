@@ -12,11 +12,59 @@ const MODE_ALIASES = new Map([
   ['verify', 'verifyEmail'],
   ['verificar', 'verifyEmail'],
   ['verificacion', 'verifyEmail'],
+  ['verify_email', 'verifyEmail'],
+  ['selectedpagemodeverifyemail', 'verifyEmail'],
+  ['action', 'verifyEmail'],
   ['resetpassword', 'resetPassword'],
   ['restablecer', 'resetPassword'],
   ['recoveremail', 'recoverEmail'],
   ['recuperaremail', 'recoverEmail']
 ]);
+
+function getSearchParamsFromCurrentLocation() {
+  const currentUrl = new URL(window.location.href);
+  const directParams = currentUrl.searchParams;
+  const hashParams = new URLSearchParams(String(window.location.hash || '').replace(/^#/, ''));
+  const nestedContinueUrl = directParams.get('continueUrl') || hashParams.get('continueUrl') || '';
+
+  if (nestedContinueUrl) {
+    try {
+      const nestedUrl = new URL(nestedContinueUrl, window.location.origin);
+      const merged = new URLSearchParams(nestedUrl.search);
+      directParams.forEach((value, key) => {
+        if (!merged.has(key)) {
+          merged.set(key, value);
+        }
+      });
+      hashParams.forEach((value, key) => {
+        if (!merged.has(key)) {
+          merged.set(key, value);
+        }
+      });
+      return merged;
+    } catch (error) {
+      // Si continueUrl viene mal formado, seguimos con los parametros directos.
+    }
+  }
+
+  const merged = new URLSearchParams(directParams);
+  hashParams.forEach((value, key) => {
+    if (!merged.has(key)) {
+      merged.set(key, value);
+    }
+  });
+  return merged;
+}
+
+function getActionMode(searchParams) {
+  return (
+    searchParams.get('mode') ||
+    searchParams.get('pageMode') ||
+    searchParams.get('selectedPageMode') ||
+    searchParams.get('action') ||
+    ''
+  );
+}
 
 function getVerifyElements() {
   return {
@@ -59,7 +107,7 @@ function normalizeMode(rawMode, hasCode) {
     return 'verifyEmail';
   }
 
-  const normalized = mode.toLowerCase();
+  const normalized = mode.toLowerCase().replace(/[^a-z]/g, '');
   return MODE_ALIASES.get(normalized) || mode;
 }
 
@@ -123,7 +171,7 @@ function showUnsupportedMode(mode) {
     status: 'Modo no soportado',
     title: 'Este enlace no corresponde a verificacion de correo',
     message: 'La pagina personalizada de este sitio solo esta preparada para validar correos del administrador.',
-    details: `Modo recibido: ${mode || 'sin valor'}`,
+    details: `Modo recibido: ${mode || 'sin valor'}. Si Firebase muestra errores como The selected page mode is invalid, revisa Authentication > Templates > Email address verification y configura la URL de accion a ${window.location.origin}/verificar/.`,
     tone: 'warning'
   });
 }
@@ -143,9 +191,9 @@ function mapFirebaseError(error) {
 }
 
 async function initVerifyPage() {
-  const searchParams = new URLSearchParams(window.location.search);
+  const searchParams = getSearchParamsFromCurrentLocation();
   const actionCode = searchParams.get('oobCode') || '';
-  const mode = normalizeMode(searchParams.get('mode'), Boolean(actionCode));
+  const mode = normalizeMode(getActionMode(searchParams), Boolean(actionCode));
   updatePrimaryAction(searchParams);
 
   try {

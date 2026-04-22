@@ -11,6 +11,7 @@ const AUTHORIZED_ADMIN_EMAIL = 'elsakitodewea@gmail.com';
 
 const FIRESTORE_PRODUCTS_COLLECTION = 'products';
 const FIRESTORE_ORDERS_COLLECTION = 'webpay_orders';
+const LEGACY_PRODUCTS_STORAGE_KEY = 'products';
 const CATEGORY_CATALOG_CONFIGS = [
   {
     key: 'regalos',
@@ -175,6 +176,7 @@ const CATEGORY_CONFIG_BY_CATEGORY = new Map(CATEGORY_CATALOG_CONFIGS.map(config 
 let firebaseAppReadyPromise = null;
 let adminProductSearchTerm = '';
 let adminOrders = [];
+let legacyProductsBootstrapCache = null;
 
 function normalizeTextValue(value) {
   return String(value || '').trim().toLowerCase();
@@ -418,6 +420,41 @@ function getAdminAuthStatusElement() {
   return document.getElementById('admin-auth-status');
 }
 
+function getProductFormStatusElement() {
+  return document.getElementById('product-form-status');
+}
+
+function clearProductFormStatus() {
+  const statusElement = getProductFormStatusElement();
+  if (!statusElement) return;
+  statusElement.textContent = '';
+  statusElement.className = 'hidden mt-3 rounded-lg border px-3 py-2 text-sm';
+}
+
+function setProductFormStatus(message, tone = 'info') {
+  const statusElement = getProductFormStatusElement();
+  if (!statusElement) return;
+
+  const toneClassMap = {
+    info: 'mt-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900',
+    success: 'mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900',
+    error: 'mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900'
+  };
+
+  statusElement.className = toneClassMap[tone] || toneClassMap.info;
+  statusElement.textContent = message;
+}
+
+function setProductFormBusy(isBusy) {
+  const saveButton = document.getElementById('save-product-btn');
+  if (!saveButton) return;
+
+  saveButton.disabled = isBusy;
+  saveButton.classList.toggle('opacity-60', isBusy);
+  saveButton.classList.toggle('cursor-not-allowed', isBusy);
+  saveButton.textContent = isBusy ? 'Guardando...' : 'Guardar';
+}
+
 function getAdminAuthNoticeElement() {
   return document.getElementById('admin-auth-notice');
 }
@@ -587,6 +624,88 @@ async function getCurrentAuthorizedAdminUser() {
   return isAuthorizedAdminUser(user) ? user : null;
 }
 
+async function waitForCurrentUser(timeoutMs = 4000) {
+  await initFirebaseApp();
+  const auth = window.firebase.auth();
+
+  if (auth.currentUser) {
+    return auth.currentUser;
+  }
+
+  return new Promise(resolve => {
+    let settled = false;
+    const finalize = user => {
+      if (settled) return;
+      settled = true;
+      unsubscribe();
+      resolve(user || auth.currentUser || null);
+    };
+
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      finalize(user);
+    });
+
+    window.setTimeout(() => finalize(auth.currentUser || null), timeoutMs);
+  });
+}
+
+async function ensureAuthorizedAdminSession() {
+  const user = await waitForCurrentUser();
+  if (!user) {
+    const authError = new Error('Debes iniciar sesión nuevamente antes de guardar cambios.');
+    authError.code = 'admin/auth-required';
+    throw authError;
+  }
+
+  await user.reload();
+  const refreshedUser = window.firebase.auth().currentUser || user;
+
+  if (!refreshedUser.emailVerified) {
+    const verificationError = new Error('Tu cuenta admin todavía no tiene el correo verificado.');
+    verificationError.code = 'admin/email-not-verified';
+    throw verificationError;
+  }
+
+  if (!isAuthorizedAdminUser(refreshedUser)) {
+    const adminError = new Error(`Solo ${AUTHORIZED_ADMIN_EMAIL} puede guardar cambios en el catálogo.`);
+    adminError.code = 'admin/not-authorized';
+    throw adminError;
+  }
+
+  await refreshedUser.getIdToken(true);
+  return refreshedUser;
+}
+
+function mapProductPersistenceError(error) {
+  switch (String(error?.code || '')) {
+    case 'admin/auth-required':
+      return 'La sesión del administrador no está activa. Inicia sesión otra vez y vuelve a guardar.';
+    case 'admin/email-not-verified':
+      return 'La cuenta existe, pero el correo todavía no está verificado. Verifica el correo y luego guarda de nuevo.';
+    case 'admin/not-authorized':
+      return `Solo ${AUTHORIZED_ADMIN_EMAIL} puede guardar cambios en el catálogo.`;
+    case 'permission-denied':
+      return 'Firestore rechazó la escritura. La sesión admin expiró o no cumple las reglas actuales.';
+    case 'unavailable':
+      return 'Firestore no respondió. Revisa tu conexión e inténtalo nuevamente.';
+    default:
+      return error?.message || 'No fue posible guardar el producto en Firestore.';
+  }
+}
+
+function syncProductsCache() {
+  legacyProductsBootstrapCache = products.map(product => normalizeProduct(product));
+}
+
+function readImageFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = event => resolve(event.target?.result || '');
+    reader.onerror = () => reject(new Error('No se pudo leer la imagen seleccionada.'));
+    reader.readAsDataURL(file);
+  });
+}
+
 function normalizeProduct(product) {
   const legacyShowcase = product.showcase || 'index';
   const category = getCanonicalCategoryValue(product.category || '');
@@ -638,6 +757,32 @@ function chunkArray(items, chunkSize) {
     chunks.push(items.slice(index, index + chunkSize));
   }
   return chunks;
+}
+
+function clearLegacyProductsStorage() {
+  try {
+    localStorage.removeItem(LEGACY_PRODUCTS_STORAGE_KEY);
+  } catch (error) {
+    console.warn('No se pudo limpiar el cache legado de productos.', error);
+  }
+}
+
+function getLegacyStoredProducts() {
+  if (legacyProductsBootstrapCache !== null) {
+    return legacyProductsBootstrapCache.map(normalizeProduct);
+  }
+
+  try {
+    const saved = localStorage.getItem(LEGACY_PRODUCTS_STORAGE_KEY);
+    const parsed = saved ? JSON.parse(saved) : [];
+    legacyProductsBootstrapCache = Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.warn('No se pudo leer el cache legado de productos.', error);
+    legacyProductsBootstrapCache = [];
+  }
+
+  clearLegacyProductsStorage();
+  return legacyProductsBootstrapCache.map(normalizeProduct);
 }
 
 async function fetchProductsFromFirestore() {
@@ -698,68 +843,38 @@ async function syncProductsToFirestore(productList) {
 }
 
 async function persistProductToFirestore(product) {
+  await ensureAuthorizedAdminSession();
   const db = await initFirebaseApp();
   const normalized = normalizeProduct(product);
   await db.collection(FIRESTORE_PRODUCTS_COLLECTION).doc(String(normalized.id)).set(normalized);
 }
 
 async function deleteProductFromFirestore(productId) {
+  await ensureAuthorizedAdminSession();
   const db = await initFirebaseApp();
   await db.collection(FIRESTORE_PRODUCTS_COLLECTION).doc(String(productId)).delete();
 }
 
 async function hydrateProductsFromFirestore() {
-  const localProducts = getInitialProducts().map(normalizeProduct);
-
   try {
     const remoteProducts = await fetchProductsFromFirestore();
-    const localVersion = getProductsVersion(localProducts);
-    const remoteVersion = getProductsVersion(remoteProducts);
-
-    if (localProducts.length > 0 && localVersion > remoteVersion) {
-      products = localProducts;
-      localStorage.setItem('products', JSON.stringify(products));
-      await syncProductsToFirestore(products);
-      return;
-    }
 
     if (remoteProducts.length > 0) {
       products = remoteProducts;
-      localStorage.setItem('products', JSON.stringify(products));
       return;
     }
 
-    products = localProducts;
-    localStorage.setItem('products', JSON.stringify(products));
-    if (products.length > 0) {
-      await syncProductsToFirestore(products);
-    }
+    products = [];
   } catch (error) {
-    console.warn('No se pudo sincronizar productos con Firestore. Se usará almacenamiento local.', error);
-    products = localProducts;
-    localStorage.setItem('products', JSON.stringify(products));
+    console.warn('No se pudo cargar productos desde Firestore.', error);
+    products = [];
   }
 }
 
 function getInitialProducts() {
-  const saved = localStorage.getItem('products');
-  if (saved) {
-    return JSON.parse(saved).map(normalizeProduct);
-  }
-
-  return [
-    {id:5, name:"Alfombras Kilim pack 5 ud", price:285000, img:"https://picsum.photos/id/29/800/900", discount:18, category:"Textiles", stock:10},
-    {id:6, name:"Toallas Hammam pack 20 ud", price:145000, img:"https://picsum.photos/id/160/800/900", discount:0, category:"Textiles", stock:10},
-    {id:7, name:"Bata de Baño Turca", price:39000, img:"https://picsum.photos/id/1011/800/900", discount:5, category:"Textiles", stock:10},
-    {id:8, name:"Jabón Alepo Natural caja 50 ud", price:95000, img:"https://picsum.photos/id/201/800/900", discount:0, category:"Aseo", stock:10},
-    {id:9, name:"Jabón Líquido Perfumado caja 12 ud", price:35000, img:"https://picsum.photos/id/405/800/900", discount:0, category:"Aseo", stock:10},
-    {id:10, name:"Pasta Dental Premium pack 24 ud", price:45000, img:"https://picsum.photos/id/455/800/900", discount:5, category:"Aseo", stock:10},
-    {id:11, name:"Champú Natural Turco pack 10 ud", price:48000, img:"https://picsum.photos/id/420/800/900", discount:8, category:"Cuidado Capilar", stock:10},
-    {id:12, name:"Acondicionador Herbal pack 10 ud", price:52000, img:"https://picsum.photos/id/1025/800/900", discount:0, category:"Cuidado Capilar", stock:10},
-    {id:13, name:"Crema Corporal Humectante caja 24 ud", price:52000, img:"https://picsum.photos/id/435/800/900", discount:0, category:"Cuidado Adulto", stock:10},
-    {id:14, name:"Desodorante Spray pack 12 ud", price:38000, img:"https://picsum.photos/id/445/800/900", discount:0, category:"Cuidado Adulto", stock:10},
-    {id:15, name:"Loción Corporal Aromática caja 10 ud", price:62000, img:"https://picsum.photos/id/465/800/900", discount:0, category:"Cuidado Adulto", stock:10}
-  ].map(normalizeProduct);
+  legacyProductsBootstrapCache = [];
+  clearLegacyProductsStorage();
+  return [];
 }
 
 function showAdminPanel() {
@@ -774,15 +889,16 @@ function showAdminLogin() {
 
 // Sincronizar products con localStorage
 function syncProductsFromStorage() {
-  const saved = localStorage.getItem('products');
-  products = saved ? JSON.parse(saved).map(normalizeProduct) : getInitialProducts();
+  if (!Array.isArray(products) || products.length === 0) {
+    products = getInitialProducts();
+  }
 }
 // admin.js - Lógica de administración independiente
 
 let products = getInitialProducts();
 
 function saveProducts(remoteOperation) {
-  localStorage.setItem('products', JSON.stringify(products));
+  syncProductsCache();
   const operation = remoteOperation || syncProductsToFirestore(products);
   operation.catch(error => {
     console.warn('No se pudo guardar productos en Firestore.', error);
@@ -1120,22 +1236,37 @@ function editProduct(id) {
   if (showInNew) showInNew.checked = flags.showInNew;
 }
 
-function deleteProduct(id) {
+async function deleteProduct(id) {
   if (confirm('¿Seguro que deseas eliminar este producto?')) {
-    const idx = products.findIndex(p => p.id === id);
-    if (idx > -1) {
-      products.splice(idx, 1);
-      saveProducts(deleteProductFromFirestore(id));
-      renderAdminProducts();
-      resetForm();
+    clearProductFormStatus();
+    setProductFormBusy(true);
+    setProductFormStatus('Eliminando producto...', 'info');
+
+    try {
+      await deleteProductFromFirestore(id);
+      const idx = products.findIndex(p => p.id === id);
+      if (idx > -1) {
+        products.splice(idx, 1);
+        syncProductsCache();
+        renderAdminProducts();
+        resetForm();
+      }
+      setProductFormStatus('Producto eliminado correctamente.', 'success');
+    } catch (error) {
+      console.warn('No fue posible eliminar el producto.', error);
+      setProductFormStatus(mapProductPersistenceError(error), 'error');
+    } finally {
+      setProductFormBusy(false);
     }
   }
 }
 
-document.getElementById('product-form').onsubmit = function(e) {
+document.getElementById('product-form').onsubmit = async function(e) {
   e.preventDefault();
+  clearProductFormStatus();
+
   const id = document.getElementById('product-id').value;
-  const name = document.getElementById('product-name').value;
+  const name = document.getElementById('product-name').value.trim();
   const price = parseInt(document.getElementById('product-price').value);
   const stockValue = document.getElementById('product-stock').value.trim();
   const stock = Number.parseInt(stockValue, 10);
@@ -1150,41 +1281,62 @@ document.getElementById('product-form').onsubmit = function(e) {
   const showInOffers = document.getElementById('product-show-in-offers')?.checked || false;
   const showInNew = document.getElementById('product-show-in-new')?.checked || false;
 
-  if (!Number.isInteger(stock) || stock < 0) {
-    alert('Ingresa un stock valido mayor o igual a 0.');
+  if (!name) {
+    setProductFormStatus('Ingresa un nombre para el producto.', 'error');
     return;
   }
 
-  if (imgFile) {
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-      img = ev.target.result;
-      saveProductData();
-    };
-    reader.readAsDataURL(imgFile);
-  } else {
-    saveProductData();
+  if (!Number.isFinite(price) || price < 0) {
+    setProductFormStatus('Ingresa un precio valido mayor o igual a 0.', 'error');
+    return;
   }
-  function saveProductData() {
+
+  if (!category) {
+    setProductFormStatus('Selecciona una categoría principal.', 'error');
+    return;
+  }
+
+  if (!Number.isInteger(stock) || stock < 0) {
+    setProductFormStatus('Ingresa un stock valido mayor o igual a 0.', 'error');
+    return;
+  }
+
+  setProductFormBusy(true);
+  setProductFormStatus('Guardando producto...', 'info');
+
+  try {
+    if (imgFile) {
+      img = await readImageFileAsDataUrl(imgFile);
+    }
+
     const updatedAt = Date.now();
     let savedProduct = null;
     if (id) {
-      // Editar
       const idx = products.findIndex(p => p.id == id);
       if (idx > -1) {
-        products[idx] = stampProductUpdate({ ...products[idx], name, price, stock, category, additionalCategories, categoryCatalogAssignments, catalogAssignments, subcategory: catalogAssignments[0] || '', discount, img, details, showcase: 'index', showInOffers, showInNew }, updatedAt);
+        savedProduct = stampProductUpdate({ ...products[idx], name, price, stock, category, additionalCategories, categoryCatalogAssignments, catalogAssignments, subcategory: catalogAssignments[0] || '', discount, img, details, showcase: 'index', showInOffers, showInNew }, updatedAt);
+        await persistProductToFirestore(savedProduct);
+        products[idx] = savedProduct;
         savedProduct = products[idx];
       }
     } else {
-      // Nuevo
       const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
       savedProduct = stampProductUpdate({ id: newId, name, price, stock, category, additionalCategories, categoryCatalogAssignments, catalogAssignments, subcategory: catalogAssignments[0] || '', discount, img, details, showcase: 'index', showInOffers, showInNew }, updatedAt);
+      await persistProductToFirestore(savedProduct);
       products.push(savedProduct);
     }
-    saveProducts(savedProduct ? persistProductToFirestore(savedProduct) : undefined);
+
+    syncProductsCache();
     showAdminPanel();
     renderAdminProducts();
     resetForm();
+
+    setProductFormStatus(id ? 'Producto actualizado correctamente.' : 'Producto guardado correctamente.', 'success');
+  } catch (error) {
+    console.warn('No fue posible guardar el producto.', error);
+    setProductFormStatus(mapProductPersistenceError(error), 'error');
+  } finally {
+    setProductFormBusy(false);
   }
 };
 
