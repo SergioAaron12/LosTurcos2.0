@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Cuidado Capilar – Los Turco 2.0</title>
+  <title>Higiene y Cuidado Personal – Los Turco 2.0</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -78,9 +78,44 @@
         </div>
         <div class="flex-1">
           <h4 class="text-dark-royal font-bold text-base md:text-lg">Tienda online</h4>
+          <p class="text-dark-royal/60 text-sm">Exclusiva RM</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-4 border-r border-gray-400 px-8 py-2">
+        <div class="text-3xl text-gold-lux flex-shrink-0"><i class="fa-solid fa-tag"></i></div>
+        <div class="flex-1">
+          <h4 class="text-dark-royal font-bold text-base md:text-lg">Precios por mayor</h4>
+          <p class="text-dark-royal/60 text-sm">Desde 2 o 3 unidades</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-4 pl-8 py-2">
+        <div class="text-3xl text-gold-lux flex-shrink-0"><i class="fa-solid fa-truck"></i></div>
+        <div class="flex-1">
+          <h4 class="text-dark-royal font-bold text-base md:text-lg">Despacho Gratis</h4>
+          <p class="text-dark-royal/60 text-sm">Compras sobre $50.000</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <header id="inicio" class="royal-bg min-h-[40vh] flex items-center relative pt-20 pb-10">
+    <div class="relative max-w-6xl mx-auto px-6 text-center text-black">
+      <h1 class="text-4xl md:text-6xl ornate-serif font-bold leading-tight mb-5 drop-shadow-md">Higiene y Cuidado Personal</h1>
+      <p class="text-base md:text-lg text-black/60 mt-4 max-w-3xl mx-auto">Catalogo de productos de higiene y cuidado personal</p>
+    </div>
+  </header>
+  <section id="productos" class="py-16">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="flex justify-end mb-6">
+        <label for="ordenar" class="mr-2 font-medium text-dark-royal">Ordenar por:</label>
+        <select id="ordenar" class="border rounded px-3 py-2 text-dark-royal" onchange="ordenarProductos()">
+          <option value="default">Por defecto</option>
+          <option value="precio-asc">Precio: menor a mayor</option>
+          <option value="precio-desc">Precio: mayor a menor</option>
+          <option value="nombre-asc">Nombre A-Z</option>
+          <option value="nombre-desc">Nombre Z-A</option>
+        </select>
       </div>
       <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
-      <!-- El modal de detalle de producto ahora es generado dinámicamente por main.js -->
     </div>
   </section>
   <footer class="bg-white text-dark-royal py-12">
@@ -88,19 +123,15 @@
       <div>
         <div class="flex items-center gap-3 mb-4">
           <img style="width: 40px; height: auto;" src="../asset/lodolosturcos2.0.png" alt="Los Turcos 2.0 - Logo" class="logo-img">
-        <br/>
-        <br>Diseñado por <a href="https://wa.me/+56945621740" class="text-dark-royal hover:text-gold-lux transition-colors">Sergio Peña</a>
-        <br/>
-        <a href="https://wa.me/+56945621740" class="text-2xl text-dark-royal hover:text-gold-lux transition-colors"><i class="fa-brands fa-whatsapp"></i></a>
-          <h3 class="ornate-serif text-xl text-gold-lux">Los Turcos 2.0</h3>
+          <h3 class="ornate-serif text-xl text-gold-lux">Los Turco 2.0</h3>
         </div>
-        <p class="text-dark-royal/70 text-sm">Importador directo de productos turcos auténticos para mayoristas en Chile.</p>
+        <p class="text-dark-royal/70 text-sm">Importador directo de productos turcos autenticos para mayoristas en Chile.</p>
       </div>
       <div>
         <h4 class="font-semibold mb-4 text-dark-royal">Enlaces</h4>
         <ul class="space-y-2 text-sm text-dark-royal/70">
           <li><a href="condiciones-mayoristas.html" class="hover:text-turquoise-jewel transition-colors">Condiciones mayoristas</a></li>
-          <li><a href="https://api.whatsapp.com/send?phone=56962801676&text=Hola%2C%20quiero%20solicitar%20el%20cat%C3%A1logo%20PDF." target="_blank" rel="noopener noreferrer" class="hover:text-turquoise-jewel transition-colors">Solicitar catálogo PDF</a></li>
+          <li><a href="https://api.whatsapp.com/send?phone=56962801676&text=Hola%2C%20quiero%20solicitar%20el%20cat%C3%A1logo%20PDF." target="_blank" rel="noopener noreferrer" class="hover:text-turquoise-jewel transition-colors">Solicitar catalogo PDF</a></li>
           <li><a href="preguntas-frecuentes.html" class="hover:text-turquoise-jewel transition-colors">Preguntas frecuentes</a></li>
         </ul>
         <div class="flex gap-4 mt-5">
@@ -123,6 +154,10 @@
     </div>
     <div class="text-center text-dark-royal/50 text-xs mt-10 pt-6 border-t border-dark-royal/10">
       © 2026 Los Turcos 2.0 – Todos los derechos reservados
+      <br/>
+      <br>Diseñado por <a href="https://wa.me/+56945621740" class="text-dark-royal hover:text-gold-lux transition-colors">Sergio Peña</a>
+      <br/>
+      <a href="https://wa.me/+56945621740" class="text-2xl text-dark-royal hover:text-gold-lux transition-colors"><i class="fa-brands fa-whatsapp"></i></a>
     </div>
   </footer>
   <script src="../js/main.js"></script>
