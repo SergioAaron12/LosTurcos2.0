@@ -1761,7 +1761,7 @@ function requestQuoteOnWhatsApp() {
   openWhatsAppChat(message);
 }
 
-const WHATSAPP_NUMBER = '56997862467';
+const WHATSAPP_NUMBER = '56962801676';
 
 function openWhatsAppChat(message) {
   window.open(`https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(message)}`, '_blank');
