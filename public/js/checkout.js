@@ -1,10 +1,10 @@
 const FIREBASE_CONFIG = {
-  apiKey: 'AIzaSyAxr95YWpF9r0nAbiI-HHSmC58pVrCxkHA',
-  authDomain: 'larutadeoriente-ed021.firebaseapp.com',
-  projectId: 'larutadeoriente-ed021',
-  storageBucket: 'larutadeoriente-ed021.firebasestorage.app',
-  messagingSenderId: '756392165267',
-  appId: '1:756392165267:web:939cacbbb3bab11fd1b266'
+  apiKey: 'AIzaSyApOacPTnK-PLkiiC1o7qdwwrTv6upGoU0',
+  authDomain: 'distribuidoralarutadeloriente.firebaseapp.com',
+  projectId: 'distribuidoralarutadeloriente',
+  storageBucket: 'distribuidoralarutadeloriente.firebasestorage.app',
+  messagingSenderId: '18647063099',
+  appId: '1:18647063099:web:d25d090a14a71603a51a1e'
 };
 
 const FIRESTORE_PRODUCTS_COLLECTION = 'products';
