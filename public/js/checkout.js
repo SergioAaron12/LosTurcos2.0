@@ -13,12 +13,12 @@ const LEGACY_PRODUCTS_STORAGE_KEY = 'products';
 let firebaseAppReadyPromise = null;
 let checkoutProductsPromise = null;
 
-function setCheckoutButtonState(disabled, label = 'Ir a pagar con Transbank') {
+function setCheckoutButtonState(disabled, label = 'Enviar cotización por WhatsApp') {
   const submitButton = document.getElementById('checkout-submit');
   if (!submitButton) return;
 
   submitButton.disabled = disabled;
-  submitButton.textContent = label;
+  submitButton.innerHTML = `<i class="fa-brands fa-whatsapp text-lg"></i> <span>${label}</span>`;
   submitButton.classList.toggle('opacity-50', disabled);
   submitButton.classList.toggle('cursor-not-allowed', disabled);
 }
@@ -246,26 +246,13 @@ async function renderCheckout() {
   setCheckoutButtonState(catalogState.source === 'missing' || hasMissingProducts);
 
   if (hasMissingProducts) {
-    setCheckoutCatalogNotice('Hay productos del carrito que ya no pudieron validarse con el catálogo actual. Vuelve al catálogo y revisa el pedido antes de pagar.', 'error');
+    setCheckoutCatalogNotice('Hay productos del carrito que ya no pudieron validarse con el catálogo actual. Vuelve al catálogo y revisa el pedido antes de cotizar.', 'error');
   }
 }
 
-function createAndSubmitTransbankForm(url, token) {
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = url;
+const WHATSAPP_QUOTE_PHONE = '56997862467';
 
-  const tokenInput = document.createElement('input');
-  tokenInput.type = 'hidden';
-  tokenInput.name = 'token_ws';
-  tokenInput.value = token;
-
-  form.appendChild(tokenInput);
-  document.body.appendChild(form);
-  form.submit();
-}
-
-async function startTransbankCheckout(event) {
+async function sendWhatsAppQuote(event) {
   event.preventDefault();
 
   const submitButton = document.getElementById('checkout-submit');
@@ -280,48 +267,46 @@ async function startTransbankCheckout(event) {
   const catalogState = await getCheckoutProducts();
   const productsById = new Map(catalogState.products.map(product => [String(product.id), product]));
   if (catalogState.source === 'missing' || cart.some(item => !productsById.has(String(item.id)))) {
-    setCheckoutError('No se pudo validar el carrito con el catálogo actual. Recarga la página y revisa el pedido antes de pagar.');
+    setCheckoutError('No se pudo validar el carrito con el catálogo actual. Recarga la página y revisa el pedido antes de cotizar.');
     setCheckoutButtonState(true);
     return;
   }
 
-  setCheckoutButtonState(true, 'Preparando pago...');
   setCheckoutError('');
 
-  try {
-    const payload = {
-      customer: {
-        name: document.getElementById('checkout-name')?.value || '',
-        email: document.getElementById('checkout-email')?.value || '',
-        phone: document.getElementById('checkout-phone')?.value || '',
-        notes: document.getElementById('checkout-notes')?.value || ''
-      },
-      items: cart.map(item => ({ id: item.id, qty: item.qty }))
-    };
+  const name = (document.getElementById('checkout-name')?.value || '').trim();
+  const phone = (document.getElementById('checkout-phone')?.value || '').trim();
+  const email = (document.getElementById('checkout-email')?.value || '').trim();
+  const notes = (document.getElementById('checkout-notes')?.value || '').trim();
 
-    const response = await fetch('/api/transbank/create', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
+  const summary = getCheckoutSummary(cart, productsById);
+  const lines = cart.map(item => {
+    const product = productsById.get(String(item.id));
+    if (!product) return null;
+    const discount = Number(product.discount) || 0;
+    const finalPrice = discount > 0 ? Math.round(product.price * (1 - discount / 100)) : product.price;
+    const lineTotal = finalPrice * item.qty;
+    return `• ${product.name} x${item.qty}: $${lineTotal.toLocaleString('es-CL')}`;
+  }).filter(Boolean);
 
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || 'No fue posible iniciar el pago con Transbank.');
-    }
+  const message = [
+    'Hola, quiero solicitar una cotización formal:',
+    '',
+    `*Cliente:* ${name}`,
+    `*Teléfono:* ${phone}`,
+    email ? `*Email:* ${email}` : '',
+    notes ? `*Comentarios:* ${notes}` : '',
+    '',
+    '*Detalle de los productos:*',
+    ...lines,
+    '',
+    `*Subtotal:* $${summary.subtotal.toLocaleString('es-CL')}`,
+    `*Descuento:* -$${summary.discount.toLocaleString('es-CL')}`,
+    `*Total estimado:* $${summary.total.toLocaleString('es-CL')}`
+  ].filter(Boolean).join('\n');
 
-    sessionStorage.setItem('pendingTransbankOrder', JSON.stringify({
-      orderId: data.orderId,
-      accessCode: data.accessCode
-    }));
-
-    createAndSubmitTransbankForm(data.url, data.token);
-  } catch (error) {
-    setCheckoutError(error.message || 'No fue posible iniciar el pago con Transbank.');
-    setCheckoutButtonState(false);
-  }
+  const whatsappUrl = `https://api.whatsapp.com/send?phone=${WHATSAPP_QUOTE_PHONE}&text=${encodeURIComponent(message)}`;
+  window.open(whatsappUrl, '_blank');
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -329,5 +314,5 @@ window.addEventListener('DOMContentLoaded', () => {
     console.warn('No se pudo renderizar el checkout.', error);
     setCheckoutError('No fue posible cargar el resumen del pedido. Recarga la página para intentarlo nuevamente.');
   });
-  document.getElementById('checkout-form')?.addEventListener('submit', startTransbankCheckout);
+  document.getElementById('checkout-form')?.addEventListener('submit', sendWhatsAppQuote);
 });

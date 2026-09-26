@@ -14,10 +14,10 @@
     <div class="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
       <div>
         <p class="text-xs font-semibold uppercase tracking-[0.35em] text-amber-800">La Ruta del Oriente</p>
-        <h1 class="mt-2 text-3xl font-bold text-slate-900 md:text-4xl" style="font-family: 'Cinzel Decorative', serif;">Pago con Transbank</h1>
-        <p class="mt-3 max-w-2xl text-sm text-slate-600 md:text-base">Confirma tus datos, revisa el pedido y te redirigimos a Webpay Plus para completar el pago seguro.</p>
+        <h1 class="mt-2 text-3xl font-bold text-slate-900 md:text-4xl" style="font-family: 'Cinzel Decorative', serif;">Solicitar Cotización</h1>
+        <p class="mt-3 max-w-2xl text-sm text-slate-600 md:text-base">Ingresa tus datos de contacto y enviaremos la cotización detallada de tu pedido directamente por WhatsApp.</p>
       </div>
-      <a href="index.html" class="inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white">Seguir comprando</a>
+      <a href="index.html" class="inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white">Seguir viendo catálogo</a>
     </div>
 
     <div class="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
@@ -27,8 +27,8 @@
             <i class="fa-solid fa-user"></i>
           </div>
           <div>
-            <h2 class="text-xl font-semibold text-slate-900">Datos del comprador</h2>
-            <p class="text-sm text-slate-500">Estos datos quedan asociados a la orden para identificar el pago.</p>
+            <h2 class="text-xl font-semibold text-slate-900">Datos de contacto</h2>
+            <p class="text-sm text-slate-500">Estos datos se incluirán en tu mensaje de cotización.</p>
           </div>
         </div>
 
@@ -46,7 +46,7 @@
 
           <label class="block text-sm font-medium text-slate-700">
             Correo electrónico
-            <input id="checkout-email" type="email" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100" placeholder="cliente@correo.cl" required />
+            <input id="checkout-email" type="email" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100" placeholder="cliente@correo.cl" />
           </label>
 
           <label class="block text-sm font-medium text-slate-700">
@@ -54,16 +54,19 @@
             <textarea id="checkout-notes" rows="4" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100" placeholder="Opcional: dirección, referencia de despacho, horario, etc."></textarea>
           </label>
 
-          <div class="rounded-3xl border border-amber-100 bg-amber-50 px-4 py-4 text-sm text-amber-900">
-            <p class="font-semibold">Importante</p>
-            <p class="mt-1">El monto final lo recalcula el backend con precios y descuentos reales del catálogo antes de crear la transacción.</p>
+          <div class="rounded-3xl border border-emerald-100 bg-emerald-50 px-4 py-4 text-sm text-emerald-900">
+            <p class="font-semibold flex items-center gap-2"><i class="fa-brands fa-whatsapp text-emerald-600 text-base"></i> Cotización directa por WhatsApp</p>
+            <p class="mt-1">Los pagos online se encuentran pausados temporalmente. Al enviar tu pedido, coordinaremos la cotización, disponibilidad de stock y entrega directamente contigo.</p>
           </div>
 
           <div id="checkout-error" class="hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"></div>
 
           <div class="flex flex-col gap-3 pt-2 md:flex-row">
-            <button id="checkout-submit" type="submit" class="inline-flex w-full items-center justify-center rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 md:w-auto">Ir a pagar con Transbank</button>
-            <a href="index.html" class="inline-flex w-full items-center justify-center rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 md:w-auto">Volver al carrito</a>
+            <button id="checkout-submit" type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 hover:bg-emerald-700 px-6 py-3 text-sm font-semibold text-white transition md:w-auto shadow-md">
+              <i class="fa-brands fa-whatsapp text-lg"></i>
+              <span>Enviar cotización por WhatsApp</span>
+            </button>
+            <a href="index.html" class="inline-flex w-full items-center justify-center rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 md:w-auto">Volver al catálogo</a>
           </div>
         </form>
       </section>
@@ -81,7 +84,7 @@
 
         <div id="checkout-empty" class="mt-8 hidden rounded-3xl border border-dashed border-slate-300 bg-white px-5 py-8 text-center">
           <p class="text-base font-semibold text-slate-700">Tu carrito está vacío.</p>
-          <p class="mt-2 text-sm text-slate-500">Agrega productos antes de iniciar el pago con Transbank.</p>
+          <p class="mt-2 text-sm text-slate-500">Agrega productos antes de solicitar tu cotización.</p>
         </div>
 
         <div id="checkout-content" class="mt-6">

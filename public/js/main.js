@@ -1314,8 +1314,10 @@ function ensureCartModal() {
           <span id="cart-total">$0</span>
         </div>
         <div class="space-y-2">
-          <button onclick="checkout()" class="w-full px-4 py-3 bg-gold-lux text-dark-royal rounded hover:bg-yellow-400 transition font-semibold">Pagar con Transbank</button>
-          <button onclick="requestQuoteOnWhatsApp()" class="w-full px-4 py-3 border border-dark-royal/20 text-dark-royal rounded hover:bg-white transition font-semibold">Solicitar cotización por WhatsApp</button>
+          <button onclick="requestQuoteOnWhatsApp()" class="w-full px-4 py-3 bg-gold-lux text-dark-royal rounded hover:bg-yellow-400 transition font-bold flex items-center justify-center gap-2 shadow-md">
+            <i class="fa-brands fa-whatsapp text-lg"></i>
+            <span>Solicitar cotización por WhatsApp</span>
+          </button>
         </div>
       </div>
     </div>
@@ -1766,23 +1768,7 @@ function renderCart() {
 }
 
 function checkout() {
-  syncProductsFromStorage();
-  if (cart.length === 0) {
-    showAppToast('Tu carrito esta vacio', 'error');
-    return;
-  }
-
-  for (const item of cart) {
-    const product = products.find(p => p.id === item.id);
-    if (!product || product.stock < item.qty) {
-      showAppToast(`No hay stock suficiente para ${product?.name || 'uno de los productos'}.`, 'error');
-      refreshVisibleProductSections();
-      renderCart();
-      return;
-    }
-  }
-
-  window.location.href = getCheckoutPagePath();
+  requestQuoteOnWhatsApp();
 }
 
 function requestQuoteOnWhatsApp() {
