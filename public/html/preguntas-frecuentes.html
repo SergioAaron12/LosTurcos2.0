@@ -1,9 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <script>
+    // Seccion en preparacion: redireccion temporal al catalogo principal
+    window.location.replace('../index.html#productos');
+  </script>
+
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Preguntas Frecuentes - Los Turcos 2.0</title>
+  <title>Preguntas Frecuentes - La Ruta del Oriente</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -20,10 +25,10 @@
     </div>
   </nav>
 
-  <nav class="w-full bg-dark-royal/92 backdrop-blur-lg border-b border-gold-lux/20 shadow-md">
+  <nav class="w-full bg-[#0b0c10] border-b border-[#f4c542]/25 shadow-lg">
     <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center gap-4">
       <a href="../index.html" class="flex items-center gap-3">
-        <img style="width: 50px; height: auto;" src="../asset/lodolosturcos2.0.png" alt="Los Turcos 2.0 - Logo" class="logo-img">
+        <img src="../asset/Logo_ruta.svg" alt="La Ruta del Oriente - Logo" class="logo-img">
       </a>
       <div class="flex items-center gap-3 text-sm md:text-base">
         <a href="../index.html" class="text-white/90 hover:text-gold-lux transition-colors">Inicio</a>
@@ -37,7 +42,7 @@
       <p class="text-sm uppercase tracking-[0.25em] text-dark-royal/60 mb-4">Ayuda</p>
       <h1 class="text-4xl md:text-5xl ornate-serif text-dark-royal mb-6">Preguntas frecuentes</h1>
       <p class="max-w-3xl mx-auto text-dark-royal/70 text-base md:text-lg leading-7">
-        Aquí reunimos respuestas rápidas sobre cómo comprar, cotizar y coordinar pedidos en la web de Los Turcos 2.0.
+        Aquí reunimos respuestas rápidas sobre cómo comprar, cotizar y coordinar pedidos en la web de La Ruta del Oriente.
       </p>
     </div>
   </header>
@@ -112,7 +117,7 @@
               Escríbenos por WhatsApp y te ayudamos con compras, catálogo, despacho o cualquier duda sobre la página.
             </p>
           </div>
-          <a href="https://api.whatsapp.com/send?phone=56962801676&text=Hola%2C%20tengo%20una%20consulta%20sobre%20la%20p%C3%A1gina%20de%20Los%20Turcos%202.0." target="_blank" rel="noopener noreferrer" class="btn-lux inline-flex items-center justify-center px-8 py-3 rounded-full font-semibold text-sm whitespace-nowrap mt-5 md:mt-0">
+          <a href="https://api.whatsapp.com/send?phone=56997862467&text=Hola%2C%20tengo%20una%20consulta%20sobre%20la%20p%C3%A1gina%20de%20La%20Ruta%20del%20Oriente." target="_blank" rel="noopener noreferrer" class="btn-lux inline-flex items-center justify-center px-8 py-3 rounded-full font-semibold text-sm whitespace-nowrap mt-5 md:mt-0">
             Consultar por WhatsApp
           </a>
         </div>
@@ -124,16 +129,16 @@
     <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-10">
       <div>
         <div class="flex items-center gap-3 mb-4">
-          <img style="width: 40px; height: auto;" src="../asset/lodolosturcos2.0.png" alt="Los Turcos 2.0 - Logo" class="logo-img">
-          <h3 class="ornate-serif text-xl text-gold-lux">Los Turco 2.0</h3>
+          <img src="../asset/Logo_ruta.svg" alt="La Ruta del Oriente - Logo" class="logo-img">
+          <h3 class="ornate-serif text-xl text-[#f4c542]">La Ruta del Oriente</h3>
         </div>
-        <p class="text-dark-royal/70 text-sm">Importador directo de productos turcos auténticos para mayoristas en Chile.</p>
+        <p class="text-dark-royal/70 text-sm">Importador directo de productos de oriente auténticos para mayoristas en Chile.</p>
       </div>
       <div>
         <h4 class="font-semibold mb-4 text-dark-royal">Enlaces</h4>
         <ul class="space-y-2 text-sm text-dark-royal/70">
           <li><a href="condiciones-mayoristas.html" class="hover:text-turquoise-jewel transition-colors">Condiciones mayoristas</a></li>
-          <li><a href="https://api.whatsapp.com/send?phone=56962801676&text=Hola%2C%20quiero%20solicitar%20el%20cat%C3%A1logo%20PDF." target="_blank" rel="noopener noreferrer" class="hover:text-turquoise-jewel transition-colors">Solicitar catálogo PDF</a></li>
+          <li><a href="https://api.whatsapp.com/send?phone=56997862467&text=Hola%2C%20quiero%20solicitar%20el%20cat%C3%A1logo%20PDF." target="_blank" rel="noopener noreferrer" class="hover:text-turquoise-jewel transition-colors">Solicitar catálogo PDF</a></li>
           <li><a href="preguntas-frecuentes.html" class="hover:text-turquoise-jewel transition-colors">Preguntas frecuentes</a></li>
         </ul>
       </div>
@@ -142,17 +147,18 @@
         <ul class="space-y-2 text-sm text-dark-royal/70">
           <li><i class="fa-solid fa-phone mr-2"></i> +569 62801676</li>
           <li><i class="fa-solid fa-envelope mr-2"></i> Dayo.bizama27@gmail.com</li>
-          <li><i class="fa-solid fa-location-dot mr-2"></i> Santiago, Chile</li>
+          <li><i class="fa-solid fa-id-card mr-2"></i> RUT: 78.480.321-K</li>
+          <li><i class="fa-solid fa-location-dot mr-2"></i> Cacique Colin 217 Sitio 41, Lampa</li>
         </ul>
       </div>
       <div>
-        <a href="https://api.whatsapp.com/send?phone=56962801676&text=Hola%2C%20quiero%20solicitar%20acceso%20mayorista." target="_blank" rel="noopener noreferrer" class="btn-lux inline-flex w-full items-center justify-center py-3 rounded-full font-semibold text-sm hover:scale-105 transition">
+        <a href="https://api.whatsapp.com/send?phone=56997862467&text=Hola%2C%20quiero%20solicitar%20acceso%20mayorista." target="_blank" rel="noopener noreferrer" class="btn-lux inline-flex w-full items-center justify-center py-3 rounded-full font-semibold text-sm hover:scale-105 transition">
           Solicitar acceso mayorista
         </a>
       </div>
     </div>
     <div class="text-center text-dark-royal/50 text-xs mt-10 pt-6 border-t border-dark-royal/10">
-      © 2026 Los Turco 2.0 – Todos los derechos reservados
+      © 2026 La Ruta del Oriente – Todos los derechos reservados
       <br/>
       <br>Diseñado por <a href="https://wa.me/+56945621740" class="text-dark-royal hover:text-gold-lux transition-colors">Sergio Peña</a>
       <br/>

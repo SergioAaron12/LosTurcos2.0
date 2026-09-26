@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "serve": "firebase emulators:start --only hosting"
+  },
   "dependencies": {
     "firebase": "^12.12.0"
   }

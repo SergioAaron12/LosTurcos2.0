@@ -1,10 +1,10 @@
 const FIREBASE_CONFIG = {
-  apiKey: 'AIzaSyBIN5wILjhmFhHFxBwuJuKPsZyUNziPDFQ',
-  authDomain: 'losturcos2.firebaseapp.com',
-  projectId: 'losturcos2',
-  storageBucket: 'losturcos2.firebasestorage.app',
-  messagingSenderId: '353259282248',
-  appId: '1:353259282248:web:212a5dbe7ee28ed5cedd7d'
+  apiKey: 'AIzaSyAxr95YWpF9r0nAbiI-HHSmC58pVrCxkHA',
+  authDomain: 'larutadeoriente-ed021.firebaseapp.com',
+  projectId: 'larutadeoriente-ed021',
+  storageBucket: 'larutadeoriente-ed021.firebasestorage.app',
+  messagingSenderId: '756392165267',
+  appId: '1:756392165267:web:939cacbbb3bab11fd1b266'
 };
 
 const FIRESTORE_PRODUCTS_COLLECTION = 'products';

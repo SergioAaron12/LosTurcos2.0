@@ -1,10 +1,10 @@
 const FIREBASE_CONFIG = {
-  apiKey: 'AIzaSyBIN5wILjhmFhHFxBwuJuKPsZyUNziPDFQ',
-  authDomain: 'losturcos2.firebaseapp.com',
-  projectId: 'losturcos2',
-  storageBucket: 'losturcos2.firebasestorage.app',
-  messagingSenderId: '353259282248',
-  appId: '1:353259282248:web:212a5dbe7ee28ed5cedd7d'
+  apiKey: 'AIzaSyAxr95YWpF9r0nAbiI-HHSmC58pVrCxkHA',
+  authDomain: 'larutadeoriente-ed021.firebaseapp.com',
+  projectId: 'larutadeoriente-ed021',
+  storageBucket: 'larutadeoriente-ed021.firebasestorage.app',
+  messagingSenderId: '756392165267',
+  appId: '1:756392165267:web:939cacbbb3bab11fd1b266'
 };
 
 const FIRESTORE_PRODUCTS_COLLECTION = 'products';
@@ -430,6 +430,7 @@ function normalizeProduct(product) {
     subcategory: catalogAssignments[0] || '',
     discount: Number(product.discount) || 0,
     img: product.img || '',
+    img2: product.img2 || '',
     details: product.details || '',
     showcase: legacyShowcase,
     updatedAt: Number(product.updatedAt) || 0,
@@ -609,6 +610,16 @@ function buscarProductos() {
 
   const resultados = getSearchMatches(query);
 
+  if (pageName === 'index.html') {
+    renderProducts('products-grid', resultados);
+    const counter = document.getElementById('productos-encontrados');
+    if (counter) {
+      counter.textContent = `${resultados.length} producto${resultados.length === 1 ? '' : 's'} encontrado${resultados.length === 1 ? '' : 's'} para "${query}"`;
+    }
+    document.getElementById('productos')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
   if (pageName !== 'todos.html') {
     redirectToTodosSearch(query);
     return;
@@ -723,6 +734,12 @@ function hideSearchSuggestions() {
 
 function executeProductSearch(product) {
   const pageName = window.location.pathname.split('/').pop() || 'index.html';
+  if (pageName === 'index.html') {
+    document.getElementById('buscador').value = product.name;
+    buscarProductos();
+    focusProductSearchResult(product);
+    return;
+  }
   if (pageName !== 'todos.html') {
     redirectToTodosSearch(product.name);
     return;
@@ -1256,11 +1273,11 @@ function ensureProductDetailModal() {
 
   modal = document.createElement('div');
   modal.id = 'product-detail-modal';
-  modal.className = 'hidden fixed inset-0 bg-gris/60 flex items-start md:items-center justify-center z-50 p-3 overflow-y-auto';
+  modal.className = 'hidden fixed inset-0 flex items-start md:items-center justify-center z-50 p-3 overflow-y-auto';
   modal.innerHTML = `
-    <div class="bg-white w-full max-w-3xl rounded-2xl overflow-hidden shadow-2xl border border-gold-lux/20 relative max-h-[calc(100vh-1.5rem)] md:max-h-[90vh] flex flex-col my-auto">
-      <button type="button" onclick="closeProductModal()" aria-label="Cerrar" class="absolute top-3 right-3 z-20 w-9 h-9 rounded-full bg-dark-royal text-black border border-white shadow-md flex items-center justify-center text-xl font-bold leading-none hover:bg-gray-300 transition">×</button>
-      <div id="product-detail-content" class="p-4 pt-12 md:p-5 md:pt-11 overflow-y-auto overscroll-contain"></div>
+    <div class="product-modal-panel w-full max-w-3xl rounded-2xl overflow-hidden shadow-2xl relative max-h-[calc(100vh-1.5rem)] md:max-h-[90vh] flex flex-col my-auto">
+      <button type="button" onclick="closeProductModal()" aria-label="Cerrar" class="absolute top-3 right-3 z-20 w-9 h-9 rounded-full flex items-center justify-center text-xl font-bold leading-none transition">×</button>
+      <div id="product-detail-content" class="p-4 pt-12 md:p-6 md:pt-11 overflow-y-auto overscroll-contain"></div>
     </div>
   `;
   document.body.appendChild(modal);
@@ -1436,7 +1453,7 @@ function renderHomeCatalog() {
   syncProductsFromStorage();
   const sortSelect = document.getElementById('ordenar');
   const criterion = sortSelect ? sortSelect.value : 'relevancia';
-  const featuredProducts = applySortCriteria([...products], criterion).slice(0, 8);
+  const featuredProducts = applySortCriteria([...products], criterion);
   renderProducts('products-grid', featuredProducts);
 }
 
@@ -1488,14 +1505,22 @@ function renderProducts(containerId, listOrOnlyDiscount = false) {
     card.className = 'product-card relative cursor-pointer';
     card.dataset.productId = p.id;
     card.innerHTML = `
-      <img src="${p.img}" class="${imageClass}" alt="${p.name}">
-      ${stockBadge}
-      ${badge}
-      <div class="p-5">
-        <h3 class="text-lg ornate-serif font-semibold mb-2 text-gold-lux">${p.name}</h3>
-        <div class="text-xl mb-3">${getProductPriceMarkup(p)}</div>
-        ${stockMarkup}
-        ${actionsMarkup}
+      <div class="product-card__img-wrapper relative">
+        <img src="${p.img}" class="product-card__img product-card__img--primary" alt="${p.name}" loading="lazy">
+        ${p.img2 ? `<img src="${p.img2}" class="product-card__img product-card__img--secondary" alt="${p.name} vista 2" loading="lazy">` : ''}
+        ${stockBadge}
+        ${badge}
+        ${p.img2 ? `<span class="photo-counter-badge" title="2 fotos disponibles"><i class="fa fa-images mr-1"></i>2 fotos</span>` : ''}
+      </div>
+      <div class="product-card__body p-5 flex flex-col flex-1 justify-between">
+        <div>
+          <h3 class="product-card__title text-lg ornate-serif font-semibold mb-2 text-gold-lux">${p.name}</h3>
+          <div class="product-card__price text-xl mb-3">${getProductPriceMarkup(p)}</div>
+          ${stockMarkup}
+        </div>
+        <div class="pt-3">
+          ${actionsMarkup}
+        </div>
       </div>
     `;
     card.addEventListener('click', function(e) {
@@ -1526,6 +1551,20 @@ function renderProducts(containerId, listOrOnlyDiscount = false) {
   });
 }
 
+window.switchDetailImage = function(src, btn) {
+  const img = document.getElementById('detail-main-img');
+  if (!img) return;
+  img.style.opacity = '0.3';
+  setTimeout(() => {
+    img.src = src;
+    img.style.opacity = '1';
+  }, 100);
+  if (btn) {
+    document.querySelectorAll('.detail-thumb-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+};
+
 // Modal de detalle de producto UNIFICADO para todos los productos
 function showProductDetailModal(id) {
   syncProductsFromStorage();
@@ -1539,39 +1578,53 @@ function showProductDetailModal(id) {
   const hasLongDescription = detailText.length > 220;
   const descriptionHint = hasLongDescription ? '<div class="text-xs text-gray-400 mb-1">Desliza dentro de la descripción para leer más</div>' : '';
   const scrollHint = '<div class="product-detail-scroll-hint text-[11px] md:hidden text-center text-gray-400 mb-2">Desliza hacia abajo para ver todo</div>';
-    const descriptionClass = hasLongDescription
-        ? 'product-detail-description-box text-gray-800 text-xs md:text-sm max-h-28 md:h-32 overflow-y-auto pr-2 text-left w-full rounded-lg border border-gray-100 bg-gray-50 p-2.5 md:p-3'
-        : 'product-detail-description-box text-gray-800 text-xs md:text-sm text-left w-full min-h-[4.25rem] md:min-h-[6rem] rounded-lg border border-gray-100 bg-gray-50 p-2.5 md:p-3';
+  const descriptionClass = hasLongDescription
+      ? 'product-detail-description-box text-xs md:text-sm max-h-28 md:h-32 overflow-y-auto pr-2 text-left w-full rounded-lg p-2.5 md:p-3'
+      : 'product-detail-description-box text-xs md:text-sm text-left w-full min-h-[4.25rem] md:min-h-[6rem] rounded-lg p-2.5 md:p-3';
+
+  const hasMultipleImages = Boolean(product.img && product.img2);
+  const galleryThumbnails = hasMultipleImages ? `
+    <div class="product-detail-thumbnails flex gap-2.5 mt-3 justify-center">
+      <button type="button" class="detail-thumb-btn active" onclick="switchDetailImage('${product.img}', this)" title="Ver foto 1">
+        <img src="${product.img}" alt="Foto 1" class="w-full h-full object-contain">
+      </button>
+      <button type="button" class="detail-thumb-btn" onclick="switchDetailImage('${product.img2}', this)" title="Ver foto 2">
+        <img src="${product.img2}" alt="Foto 2" class="w-full h-full object-contain">
+      </button>
+    </div>
+  ` : '';
+
   content.innerHTML = `
-      <div class="product-detail-layout flex flex-col md:flex-row gap-3 md:gap-6 items-start md:h-full md:max-h-[calc(90vh-3.5rem)] overflow-visible md:overflow-hidden">
-        <div class="product-detail-media flex flex-col items-center text-center w-full md:w-[220px] md:flex-shrink-0">
-            <div class="product-detail-image-frame w-full max-w-[136px] md:max-w-[220px] aspect-square rounded-2xl shadow border border-gray-100 bg-white p-2 md:p-3 flex items-center justify-center">
-          <img src="${product.img}" alt="${product.name}" class="w-full h-full object-contain rounded-xl">
+      <div class="product-detail-layout flex flex-col md:flex-row gap-4 md:gap-8 items-start md:h-full md:max-h-[calc(90vh-3.5rem)] overflow-visible md:overflow-hidden">
+        <div class="product-detail-media flex flex-col items-center text-center w-full md:w-[240px] md:flex-shrink-0">
+          <div class="product-detail-image-frame w-full max-w-[160px] md:max-w-[240px] aspect-square rounded-2xl flex items-center justify-center">
+            <img id="detail-main-img" src="${product.img}" alt="${product.name}" class="w-full h-full object-contain rounded-xl transition duration-300">
+          </div>
+          ${galleryThumbnails}
         </div>
-      </div>
         <div class="product-detail-main flex flex-col min-w-0 flex-1 w-full md:h-full md:overflow-hidden">
             ${scrollHint}
-            <div class="product-detail-title text-base md:text-xl text-gold-lux font-semibold mb-1 md:mb-2 leading-tight text-center md:text-left pr-8">${product.name}</div>
-            <div class="product-detail-price text-sm md:text-base text-gray-700 mb-1 md:mb-2 text-center md:text-left">Precio habitual: ${getProductPriceMarkup(product)}</div>
-            <div class="product-detail-stock text-xs md:text-sm ${isOutOfStock ? 'text-red-600' : 'text-gray-500'} mb-2 md:mb-4 text-center md:text-left">${isOutOfStock ? '<span class="font-semibold">Producto agotado</span>' : `Stock disponible: <span class="font-semibold text-dark-royal">${stock}</span>`}</div>
+            <div class="product-detail-title text-base md:text-xl font-bold mb-1 md:mb-2 leading-tight text-center md:text-left pr-8">${product.name}</div>
+            <div class="product-detail-price text-sm md:text-base mb-1 md:mb-2 text-center md:text-left">Precio habitual: ${getProductPriceMarkup(product)}</div>
+            <div class="product-detail-stock text-xs md:text-sm ${isOutOfStock ? 'text-red-400' : ''} mb-2 md:mb-4 text-center md:text-left">${isOutOfStock ? '<span class="font-semibold">Producto agotado</span>' : `Stock disponible: <span class="font-semibold text-gold-lux">${stock}</span>`}</div>
             <div class="product-detail-qty mb-2 md:mb-4 flex flex-col items-center md:items-start gap-1 md:gap-2">
-              <label class="text-xs md:text-sm text-gray-700">Cantidad</label>
-              <div class="product-detail-stepper flex items-center border rounded-lg px-2 md:px-3 py-2 md:py-3 bg-gray-50" style="width: 120px;">
-              <button type="button" id="btn-restar" class="text-lg md:text-xl px-2.5 md:px-3 text-gray-500 hover:text-dark-royal" tabindex="-1" ${isOutOfStock ? 'disabled' : ''}>−</button>
-              <input id="modal-cantidad" type="number" min="1" max="${stock}" value="${stock > 0 ? 1 : 0}" class="w-10 md:w-11 px-1 py-0.5 border-0 bg-transparent text-center text-base md:text-lg font-semibold outline-none" readonly />
-              <button type="button" id="btn-sumar" class="text-lg md:text-xl px-2.5 md:px-3 text-gray-500 hover:text-dark-royal" tabindex="-1" ${isOutOfStock ? 'disabled' : ''}>+</button>
-          </div>
-          <div id="stock-msg" class="text-xs text-red-600 mt-1" style="display:none"></div>
-        </div>
-            <div class="product-detail-label text-xs md:text-sm text-gray-600 mb-1 md:mb-2 text-center md:text-left">Descripción:</div>
-        ${descriptionHint}
-        <div class="${descriptionClass}">${detailText}</div>
-            <div class="product-detail-actions flex flex-col sm:flex-row gap-2 md:gap-3 w-full mt-2 md:mt-4 pt-2 md:pt-4 border-t border-gray-100">
-            <button ${isOutOfStock ? 'disabled' : ''} onclick="addModalToCart(${product.id})" class="flex-1 py-2.5 md:py-3 text-sm md:text-base btn-lux rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed">${isOutOfStock ? 'Agotado' : 'Agregar al carrito'}</button>
-            <button ${isOutOfStock ? 'disabled' : ''} onclick="addModalToCart(${product.id}, true)" class="flex-1 py-2.5 md:py-3 text-sm md:text-base btn-lux rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed">${isOutOfStock ? 'No disponible' : 'Comprar ahora'}</button>
+              <label class="text-xs md:text-sm">Cantidad</label>
+              <div class="product-detail-stepper flex items-center px-2 md:px-3 py-1.5 md:py-2" style="width: 124px;">
+                <button type="button" id="btn-restar" class="text-lg md:text-xl px-2.5 md:px-3" tabindex="-1" ${isOutOfStock ? 'disabled' : ''}>−</button>
+                <input id="modal-cantidad" type="number" min="1" max="${stock}" value="${stock > 0 ? 1 : 0}" class="w-10 md:w-11 px-1 py-0.5 border-0 bg-transparent text-center text-base md:text-lg font-bold outline-none" readonly />
+                <button type="button" id="btn-sumar" class="text-lg md:text-xl px-2.5 md:px-3" tabindex="-1" ${isOutOfStock ? 'disabled' : ''}>+</button>
+              </div>
+              <div id="stock-msg" class="text-xs text-red-400 mt-1" style="display:none"></div>
+            </div>
+            <div class="product-detail-label text-xs md:text-sm mb-1 md:mb-2 text-center md:text-left">Descripción:</div>
+            ${descriptionHint}
+            <div class="${descriptionClass}">${detailText}</div>
+            <div class="product-detail-actions flex flex-col sm:flex-row gap-2 md:gap-3 w-full mt-2 md:mt-4 pt-2 md:pt-4">
+              <button ${isOutOfStock ? 'disabled' : ''} onclick="addModalToCart(${product.id})" class="flex-1 py-3 text-sm md:text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed">${isOutOfStock ? 'Agotado' : 'Agregar al carrito'}</button>
+              <button ${isOutOfStock ? 'disabled' : ''} onclick="addModalToCart(${product.id}, true)" class="flex-1 py-3 text-sm md:text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed">${isOutOfStock ? 'No disponible' : 'Comprar ahora'}</button>
+            </div>
         </div>
       </div>
-    </div>
   `;
   // Lógica de cantidad con botones
   setTimeout(() => {
@@ -1688,7 +1741,7 @@ function renderCart() {
       const baseLineTotal = prod.price * item.qty;
       const finalLineTotal = getDiscountedUnitPrice(prod) * item.qty;
       const hasDiscount = Number(prod.discount) > 0;
-      return `<li class="flex items-center gap-3 py-3 border-b border-gray-100"><img src="${prod.img}" class="w-14 h-14 object-cover rounded" alt="${prod.name}"/><div class="flex-1 min-w-0"><div class="font-medium text-dark-royal leading-tight">${prod.name}</div><div class="text-sm text-gray-500">Cantidad: ${item.qty}${hasDiscount ? ` · Descuento: ${prod.discount}%` : ''}</div><div class="text-sm mt-1">${hasDiscount ? `<span class="line-through text-gray-400 mr-2">$${baseLineTotal.toLocaleString('es-CL')}</span>` : ''}<span class="font-bold text-turquoise-jewel">$${finalLineTotal.toLocaleString('es-CL')}</span></div></div><button onclick="removeFromCart(${item.id})" class="ml-1 text-red-500 hover:text-red-700" aria-label="Eliminar ${prod.name}"><i class="fa fa-trash"></i></button></li>`;
+      return `<li class="flex items-center gap-3 py-3 border-b border-gold-lux/20"><div class="w-14 h-14 bg-white rounded-lg p-1 flex items-center justify-center flex-shrink-0 border border-gold-lux/30"><img src="${prod.img}" class="max-w-full max-h-full object-contain" alt="${prod.name}"/></div><div class="flex-1 min-w-0"><div class="font-medium text-white leading-tight">${prod.name}</div><div class="text-xs text-gray-400 mt-0.5">Cantidad: ${item.qty}${hasDiscount ? ` · Descuento: ${prod.discount}%` : ''}</div><div class="text-sm mt-1">${hasDiscount ? `<span class="line-through text-gray-500 mr-2">$${baseLineTotal.toLocaleString('es-CL')}</span>` : ''}<span class="font-bold text-gold-lux">$${finalLineTotal.toLocaleString('es-CL')}</span></div></div><button onclick="removeFromCart(${item.id})" class="ml-1 text-red-400 hover:text-red-300 p-1" aria-label="Eliminar ${prod.name}"><i class="fa fa-trash"></i></button></li>`;
     }).join('') + '</ul>';
   }
 
@@ -1761,10 +1814,12 @@ function requestQuoteOnWhatsApp() {
   openWhatsAppChat(message);
 }
 
-const WHATSAPP_NUMBER = '56962801676';
+const WHATSAPP_NUMBER = '56997862467';
+const WHATSAPP_NUMBER_2 = '56998750387';
 
-function openWhatsAppChat(message) {
-  window.open(`https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(message)}`, '_blank');
+function openWhatsAppChat(message, useSecondary = false) {
+  const number = useSecondary ? WHATSAPP_NUMBER_2 : WHATSAPP_NUMBER;
+  window.open(`https://api.whatsapp.com/send?phone=${number}&text=${encodeURIComponent(message)}`, '_blank');
 }
 
 function initFooterWhatsAppButtons() {

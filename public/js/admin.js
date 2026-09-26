@@ -1,10 +1,10 @@
 const FIREBASE_CONFIG = {
-  apiKey: 'AIzaSyBIN5wILjhmFhHFxBwuJuKPsZyUNziPDFQ',
-  authDomain: 'losturcos2.firebaseapp.com',
-  projectId: 'losturcos2',
-  storageBucket: 'losturcos2.firebasestorage.app',
-  messagingSenderId: '353259282248',
-  appId: '1:353259282248:web:212a5dbe7ee28ed5cedd7d'
+  apiKey: 'AIzaSyAxr95YWpF9r0nAbiI-HHSmC58pVrCxkHA',
+  authDomain: 'larutadeoriente-ed021.firebaseapp.com',
+  projectId: 'larutadeoriente-ed021',
+  storageBucket: 'larutadeoriente-ed021.firebasestorage.app',
+  messagingSenderId: '756392165267',
+  appId: '1:756392165267:web:939cacbbb3bab11fd1b266'
 };
 
 const AUTHORIZED_ADMIN_EMAIL = 'elsakitodewea@gmail.com';
@@ -724,6 +724,7 @@ function normalizeProduct(product) {
     subcategory: catalogAssignments[0] || '',
     discount: Number(product.discount) || 0,
     img: product.img || '',
+    img2: product.img2 || '',
     details: product.details || '',
     showcase: legacyShowcase,
     updatedAt: Number(product.updatedAt) || 0,
@@ -988,7 +989,10 @@ function renderAdminProducts() {
     const card = document.createElement('div');
     card.className = 'border p-3 rounded mb-2 flex items-center gap-3 bg-white shadow';
     card.innerHTML = `
-      <img src="${p.img}" class="w-16 h-16 object-cover rounded"/>
+      <div class="flex gap-1.5 items-center flex-shrink-0">
+        <img src="${p.img}" class="w-16 h-16 object-contain rounded border bg-gray-50 p-1" title="Foto 1"/>
+        ${p.img2 ? `<img src="${p.img2}" class="w-16 h-16 object-contain rounded border border-amber-300 bg-gray-50 p-1" title="Foto 2"/>` : ''}
+      </div>
       <div class="flex-1">
         <div class="font-bold">${p.name}</div>
         <div>Stock: ${stockStatus}</div>
@@ -1207,8 +1211,12 @@ function resetForm() {
   renderAdminAdditionalCategories([]);
   document.getElementById('product-discount').value = '';
   document.getElementById('product-img').value = '';
-  document.getElementById('product-details').value = '';
   document.getElementById('product-img-file').value = '';
+  const img2Input = document.getElementById('product-img2');
+  if (img2Input) img2Input.value = '';
+  const img2FileInput = document.getElementById('product-img2-file');
+  if (img2FileInput) img2FileInput.value = '';
+  document.getElementById('product-details').value = '';
   renderAdminCatalogAssignments({});
   const showInOffers = document.getElementById('product-show-in-offers');
   const showInNew = document.getElementById('product-show-in-new');
@@ -1226,9 +1234,13 @@ function editProduct(id) {
   document.getElementById('product-category').value = prod.category || '';
   renderAdminAdditionalCategories(prod.additionalCategories || []);
   document.getElementById('product-discount').value = prod.discount || 0;
-  document.getElementById('product-img').value = prod.img;
-  document.getElementById('product-details').value = prod.details || '';
+  document.getElementById('product-img').value = prod.img || '';
   document.getElementById('product-img-file').value = '';
+  const img2Input = document.getElementById('product-img2');
+  if (img2Input) img2Input.value = prod.img2 || '';
+  const img2FileInput = document.getElementById('product-img2-file');
+  if (img2FileInput) img2FileInput.value = '';
+  document.getElementById('product-details').value = prod.details || '';
   renderAdminCatalogAssignments(prod.categoryCatalogAssignments || {});
   const showInOffers = document.getElementById('product-show-in-offers');
   const showInNew = document.getElementById('product-show-in-new');
@@ -1278,6 +1290,8 @@ document.getElementById('product-form').onsubmit = async function(e) {
   const details = document.getElementById('product-details').value;
   let img = document.getElementById('product-img').value;
   const imgFile = document.getElementById('product-img-file').files[0];
+  let img2 = document.getElementById('product-img2')?.value || '';
+  const img2File = document.getElementById('product-img2-file')?.files[0];
   const showInOffers = document.getElementById('product-show-in-offers')?.checked || false;
   const showInNew = document.getElementById('product-show-in-new')?.checked || false;
 
@@ -1308,20 +1322,23 @@ document.getElementById('product-form').onsubmit = async function(e) {
     if (imgFile) {
       img = await readImageFileAsDataUrl(imgFile);
     }
+    if (img2File) {
+      img2 = await readImageFileAsDataUrl(img2File);
+    }
 
     const updatedAt = Date.now();
     let savedProduct = null;
     if (id) {
       const idx = products.findIndex(p => p.id == id);
       if (idx > -1) {
-        savedProduct = stampProductUpdate({ ...products[idx], name, price, stock, category, additionalCategories, categoryCatalogAssignments, catalogAssignments, subcategory: catalogAssignments[0] || '', discount, img, details, showcase: 'index', showInOffers, showInNew }, updatedAt);
+        savedProduct = stampProductUpdate({ ...products[idx], name, price, stock, category, additionalCategories, categoryCatalogAssignments, catalogAssignments, subcategory: catalogAssignments[0] || '', discount, img, img2, details, showcase: 'index', showInOffers, showInNew }, updatedAt);
         await persistProductToFirestore(savedProduct);
         products[idx] = savedProduct;
         savedProduct = products[idx];
       }
     } else {
       const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
-      savedProduct = stampProductUpdate({ id: newId, name, price, stock, category, additionalCategories, categoryCatalogAssignments, catalogAssignments, subcategory: catalogAssignments[0] || '', discount, img, details, showcase: 'index', showInOffers, showInNew }, updatedAt);
+      savedProduct = stampProductUpdate({ id: newId, name, price, stock, category, additionalCategories, categoryCatalogAssignments, catalogAssignments, subcategory: catalogAssignments[0] || '', discount, img, img2, details, showcase: 'index', showInOffers, showInNew }, updatedAt);
       await persistProductToFirestore(savedProduct);
       products.push(savedProduct);
     }
