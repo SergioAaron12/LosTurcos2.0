@@ -37,10 +37,19 @@ html, body {
 
 @media (max-width: 768px) {
   .logo-img {
-    width: 58px !important;
-    height: 58px !important;
+    width: 96px !important;
+    height: 96px !important;
+    border-width: 2.5px !important;
+    box-shadow: 0 0 18px rgba(244, 197, 66, 0.45) !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .logo-img {
+    width: 86px !important;
+    height: 86px !important;
     border-width: 2px !important;
-    box-shadow: 0 0 14px rgba(244, 197, 66, 0.4) !important;
+    box-shadow: 0 0 15px rgba(244, 197, 66, 0.4) !important;
   }
 }
 
