@@ -1,0 +1,25 @@
+# robots.txt para Distribuidora La Ruta del Oriente
+User-agent: *
+Allow: /
+Allow: /favicon.ico
+Allow: /asset/
+Disallow: /admin.html
+Disallow: /envios.html
+Disallow: /pago/
+Disallow: /verificar/
+
+User-agent: Googlebot
+Allow: /
+Allow: /favicon.ico
+Allow: /asset/
+Disallow: /admin.html
+Disallow: /envios.html
+Disallow: /pago/
+Disallow: /verificar/
+
+User-agent: Googlebot-Image
+Allow: /
+Allow: /favicon.ico
+Allow: /asset/
+
+Sitemap: https://distribuidoralarutadeloriente.cl/sitemap.xml

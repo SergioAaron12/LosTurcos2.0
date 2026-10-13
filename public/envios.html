@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Distribuidora La Ruta del Oriente - Panel Conectado a Firebase</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/x-icon" href="/asset/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="css/envios.css">
+
+  <!-- Firebase Web SDK Compat for Real-Time Sync with distribuidoralarutadeloriente -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<div style="background: #1e2430; padding: 8px 24px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #cbd5e1; border-bottom: 1px solid #334155;">
+  <div>
+    <strong style="color: #f4c542;">Distribuidora La Ruta del Oriente</strong> &middot; Módulo de Envíos Masivos
+  </div>
+  <div style="display: flex; gap: 14px;">
+    <a href="/admin.html" style="color: #f4c542; text-decoration: none; font-weight: 700;">&laquo; Volver al Panel Admin</a>
+    <a href="/" style="color: #ffffff; text-decoration: none;">Ir a la Tienda</a>
+  </div>
+</div>
+
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="brand-logo-img">
+        <img src="/asset/logo-icon.png" alt="La Ruta del Oriente" onerror="this.src='/asset/Logo_ruta.svg'">
+      </div>
+      <div class="brand-info">
+        <h1>La Ruta del Oriente <span>Firebase Live</span></h1>
+        <p>
+          <a href="https://distribuidoralarutadeloriente.cl" target="_blank" class="store-link">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> distribuidoralarutadeloriente.cl
+          </a>
+          &middot; Envíos a Farmacias
+        </p>
+      </div>
+    </div>
+
+    <!-- Live Firebase Indicator & Quick Metrics -->
+    <div class="header-metrics">
+      <div class="metric-pill metric-firebase" id="firebase-live-pill" title="Conexión en tiempo real activa con Cloud Firestore">
+        <span class="pulse-dot"></span>
+        <i class="fa-solid fa-fire text-gold"></i>
+        <span>Firebase: <strong id="fb-status-text">Conectado</strong></span>
+      </div>
+
+      <button class="btn btn-sm btn-outline btn-sync-header" id="btn-sync-firebase-header" title="Sincronizar productos de Firebase ahora">
+        <i class="fa-solid fa-arrows-rotate"></i> Sincronizar
+      </button>
+
+      <div class="metric-pill" title="Total de farmacias cargadas en el Excel">
+        <i class="fa-solid fa-users"></i>
+        <span>Clientes: <strong id="metric-total">0</strong></span>
+      </div>
+      <div class="metric-pill metric-email" title="Contactos con correo electrónico verificado">
+        <i class="fa-solid fa-envelope"></i>
+        <span>Correos: <strong id="metric-email">0</strong></span>
+      </div>
+      <div class="metric-pill metric-whatsapp" title="Contactos con WhatsApp móvil (+56 9...)">
+        <i class="fa-brands fa-whatsapp"></i>
+        <span>WhatsApp: <strong id="metric-wa">0</strong></span>
+      </div>
+      <div class="metric-pill metric-products" title="Productos sincronizados desde Firebase">
+        <i class="fa-solid fa-boxes-stacked"></i>
+        <span>Productos: <strong id="metric-products">0</strong></span>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" data-tab="tab-email">
+        <i class="fa-solid fa-paper-plane"></i> Campaña Correo con Productos
+      </button>
+      <button class="tab-btn" data-tab="tab-contacts">
+        <i class="fa-solid fa-address-book"></i> Clientes (773)
+      </button>
+      <button class="tab-btn" data-tab="tab-products">
+        <i class="fa-solid fa-fire text-gold"></i> Productos Firebase &amp; Catálogo
+      </button>
+      <button class="tab-btn" data-tab="tab-whatsapp">
+        <i class="fa-brands fa-whatsapp"></i> Campaña WhatsApp
+      </button>
+      <button class="tab-btn" data-tab="tab-settings">
+        <i class="fa-solid fa-sliders"></i> Config. Correo
+      </button>
+      <button class="tab-btn" data-tab="tab-history">
+        <i class="fa-solid fa-clock-rotate-left"></i> Historial
+      </button>
+    </nav>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-content">
+
+    <!-- ==================== TAB 1: CAMPAÑA CORREO (PRINCIPAL) ==================== -->
+    <section id="tab-email" class="tab-pane active">
+      <div class="view-header">
+        <div>
+          <h2>Crear Correo Masivo con Productos de Firebase</h2>
+          <p>Tus productos de <a href="https://distribuidoralarutadeloriente.cl" target="_blank">distribuidoralarutadeloriente.cl</a> están sincronizados. Marca con 1 clic los que deseas ofrecer a tus <strong class="badge-accent" id="email-target-count">0</strong> clientes.</p>
+        </div>
+        <div class="view-actions">
+          <button class="btn btn-outline" id="btn-preview-email-modal">
+            <i class="fa-solid fa-eye"></i> Ver Vista Previa
+          </button>
+          <button class="btn btn-gold btn-lg" id="btn-launch-email-campaign">
+            <i class="fa-solid fa-paper-plane"></i> Iniciar Envío Masivo a Clientes
+          </button>
+        </div>
+      </div>
+
+      <div class="campaign-layout">
+        <!-- Editor Column -->
+        <div class="editor-col">
+
+          <!-- 1. PRODUCTOS A OFRECER (SINCRONIZADOS CON FIREBASE) -->
+          <div class="card form-card border-gold">
+            <div class="card-header-flex">
+              <div>
+                <h3>
+                  <i class="fa-solid fa-fire text-gold"></i> 
+                  Productos de La Ruta del Oriente (Firebase Firestore)
+                </h3>
+                <p class="subtitle">Marca las casillas de los productos que deseas incluir en la oferta. Se mostrarán con su foto, precio mayorista y enlace de compra.</p>
+              </div>
+              <div class="products-quick-actions">
+                <button type="button" class="btn btn-sm btn-outline" id="btn-select-all-prods">
+                  <i class="fa-solid fa-check-double"></i> Marcar Todos
+                </button>
+                <button type="button" class="btn btn-sm btn-ghost" id="btn-deselect-all-prods">
+                  Deseleccionar
+                </button>
+                <button type="button" class="btn btn-sm btn-primary" id="btn-sync-firebase-picker" title="Recargar productos desde Firebase Firestore">
+                  <i class="fa-solid fa-arrows-rotate"></i> Sincronizar Firebase
+                </button>
+              </div>
+            </div>
+
+            <!-- Products Grid Picker -->
+            <div class="products-picker-grid" id="products-picker-grid">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- 2. MENSAJE Y DATOS DEL CORREO -->
+          <div class="card form-card">
+            <h3><i class="fa-solid fa-pen-to-square"></i> Mensaje del Correo</h3>
+
+            <div class="form-group">
+              <label for="email-subject">Asunto del Correo <span class="req">*</span></label>
+              <input type="text" id="email-subject" class="form-control" value="🔥 Ofertas Mayoristas Especiales para {farmacia} - Distribuidora La Ruta del Oriente">
+              <small class="hint">Usa <code>{farmacia}</code> o <code>{contacto}</code> para que se personalice automáticamente para cada cliente.</small>
+            </div>
+
+            <div class="form-group">
+              <label for="email-title">Título Destacado del Encabezado</label>
+              <input type="text" id="email-title" class="form-control" value="Lista de Precios y Ofertas Exclusivas para {farmacia}">
+            </div>
+
+            <!-- Dynamic Tags Toolbar -->
+            <div class="tags-helper">
+              <span>Insertar datos del cliente con 1 clic:</span>
+              <button type="button" class="tag-pill" data-insert="{farmacia}"><i class="fa-solid fa-plus"></i> {farmacia}</button>
+              <button type="button" class="tag-pill" data-insert="{contacto}"><i class="fa-solid fa-plus"></i> {contacto}</button>
+              <button type="button" class="tag-pill" data-insert="{direccion}"><i class="fa-solid fa-plus"></i> {direccion}</button>
+              <button type="button" class="tag-pill" data-insert="{comuna}"><i class="fa-solid fa-plus"></i> {comuna}</button>
+              <button type="button" class="tag-pill" data-insert="{rut}"><i class="fa-solid fa-plus"></i> {rut}</button>
+            </div>
+
+            <div class="form-group">
+              <label for="email-body">Mensaje / Introducción de la Oferta <span class="req">*</span></label>
+              <textarea id="email-body" class="form-control" rows="6">Estimado/a {contacto},
+
+Le saludamos cordialmente desde Distribuidora La Ruta del Oriente (distribuidoralarutadeloriente.cl).
+Tenemos el agrado de presentarle nuestras ofertas mayoristas y stock disponible con entrega directa para {farmacia}.
+
+A continuación le detallamos los productos destacados con precio especial de distribuidor:</textarea>
+            </div>
+
+            <!-- Call to action button -->
+            <div class="row-2col">
+              <div class="form-group">
+                <label for="email-cta-text">Texto del Botón Principal</label>
+                <input type="text" id="email-cta-text" class="form-control" value="Visitar Catálogo Completo en la Web">
+              </div>
+              <div class="form-group">
+                <label for="email-cta-url">Enlace a tu Tienda Web</label>
+                <input type="url" id="email-cta-url" class="form-control" value="https://distribuidoralarutadeloriente.cl">
+              </div>
+            </div>
+
+            <!-- Sender Signature info -->
+            <div class="row-2col">
+              <div class="form-group">
+                <label for="email-sender-name">Nombre Visible del Remitente</label>
+                <input type="text" id="email-sender-name" class="form-control" value="Distribuidora La Ruta del Oriente">
+              </div>
+              <div class="form-group">
+                <label for="email-sender-phone">WhatsApp de Ventas</label>
+                <input type="text" id="email-sender-phone" class="form-control" value="+56 9 9786 2467 / +56 9 9875 0387">
+              </div>
+            </div>
+          </div>
+
+          <!-- Attachments & Extra Photos Card -->
+          <div class="card form-card">
+            <h3><i class="fa-solid fa-paperclip"></i> Banner Publicitario o Archivos Adjuntos (Opcional)</h3>
+            <p class="subtitle">Sube un volante o lista de precios en PDF / Excel si deseas adjuntarla adicionalmente al correo.</p>
+
+            <div class="dropzone" id="email-dropzone">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+              <p><strong>Arrastra tus archivos aquí</strong>, o haz clic para seleccionar</p>
+              <span>Formatos permitidos: JPG, PNG, PDF, Excel (hasta 25MB)</span>
+              <input type="file" id="email-file-input" multiple accept="image/*,.pdf,.xlsx,.xls,.docx" style="display: none;">
+            </div>
+
+            <!-- Uploaded files list -->
+            <div class="uploaded-files-list" id="uploaded-files-list"></div>
+
+            <!-- Banner option -->
+            <div class="banner-selector" id="banner-selector-container" style="display: none;">
+              <label class="checkbox-label">
+                <input type="checkbox" id="cb-use-as-banner" checked>
+                <span>Mostrar la primera imagen como <strong>Banner destacado</strong> en el encabezado del correo</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Preview Column -->
+        <div class="preview-col">
+          <div class="card preview-card-wrapper">
+            <div class="preview-card-header">
+              <div class="preview-title">
+                <i class="fa-solid fa-eye text-gold"></i> Previsualización en Vivo
+              </div>
+              <div class="preview-contact-picker">
+                <span>Cliente:</span>
+                <select id="preview-contact-select" class="custom-select select-sm"></select>
+              </div>
+            </div>
+            <div class="email-preview-subject-bar">
+              <strong>Asunto:</strong> <span id="preview-subject-text">Asunto del correo...</span>
+            </div>
+            <div class="email-preview-frame" id="email-preview-frame">
+              <!-- Rendered HTML preview -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: PRODUCTOS & FIREBASE STATUS ==================== -->
+    <section id="tab-products" class="tab-pane">
+      <div class="view-header">
+        <div>
+          <h2>Productos Conectados con Firebase Firestore</h2>
+          <p>Sincronización directa en tiempo real con <a href="https://distribuidoralarutadeloriente.cl" target="_blank">distribuidoralarutadeloriente.cl</a> y tu base de datos Firebase.</p>
+        </div>
+        <div class="view-actions">
+          <button class="btn btn-outline" id="btn-sync-firebase-now">
+            <i class="fa-solid fa-arrows-rotate"></i> Sincronizar con Firebase Ahora
+          </button>
+          <a href="https://distribuidoralarutadeloriente.cl/admin.html" target="_blank" class="btn btn-primary">
+            <i class="fa-solid fa-lock"></i> Ir al Admin de la Web
+          </a>
+          <button class="btn btn-gold" id="btn-add-product-page">
+            <i class="fa-solid fa-plus"></i> + Agregar Producto Local
+          </button>
+        </div>
+      </div>
+
+      <!-- Firebase Real-Time Status Card -->
+      <div class="card firebase-status-card mb-4">
+        <div class="fb-status-header">
+          <div class="fb-badge-live">
+            <span class="pulse-dot"></span>
+            <strong>Firebase Firestore: CONEXIÓN ACTIVA</strong>
+          </div>
+          <div class="fb-last-sync">
+            Última sincronización: <span id="fb-last-sync-time">En tiempo real</span>
+          </div>
+        </div>
+        <div class="fb-details-grid">
+          <div class="fb-detail-item">
+            <span class="label">Proyecto Firebase:</span>
+            <span class="val"><code>distribuidoralarutadeloriente</code></span>
+          </div>
+          <div class="fb-detail-item">
+            <span class="label">Colección de Productos:</span>
+            <span class="val"><code>products</code></span>
+          </div>
+          <div class="fb-detail-item">
+            <span class="label">Storage Bucket:</span>
+            <span class="val"><code>distribuidoralarutadeloriente.firebasestorage.app</code></span>
+          </div>
+          <div class="fb-detail-item">
+            <span class="label">Dominio Web:</span>
+            <span class="val"><a href="https://distribuidoralarutadeloriente.cl" target="_blank" class="store-link">distribuidoralarutadeloriente.cl</a></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="catalog-grid" id="catalog-full-grid">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: CONTACTOS ==================== -->
+    <section id="tab-contacts" class="tab-pane">
+      <div class="view-header">
+        <div>
+          <h2>Directorio de Clientes y Farmacias (773 Registros)</h2>
+          <p>Filtra y selecciona los destinatarios de tu archivo Excel.</p>
+        </div>
+        <div class="view-actions">
+          <button class="btn btn-outline" id="btn-reload-contacts">
+            <i class="fa-solid fa-rotate-right"></i> Recargar Excel
+          </button>
+          <button class="btn btn-gold" id="btn-go-to-email-tab">
+            <i class="fa-solid fa-envelope"></i> Redactar Oferta (<span class="sel-count-badge">0</span>)
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters Toolbar -->
+      <div class="toolbar-card">
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="contact-search" placeholder="Buscar por farmacia, persona de contacto, RUT, comuna...">
+        </div>
+
+        <div class="filters-group">
+          <select id="filter-channel" class="custom-select">
+            <option value="all">Todos los canales</option>
+            <option value="has_email">Solo con Correo</option>
+            <option value="has_wa">Solo con WhatsApp</option>
+            <option value="has_both">Con Correo y WhatsApp</option>
+          </select>
+
+          <select id="filter-comuna" class="custom-select">
+            <option value="all">Todas las Comunas</option>
+          </select>
+
+          <div class="selection-actions">
+            <button class="btn btn-sm btn-ghost" id="btn-select-all">
+              <i class="fa-solid fa-square-check"></i> Seleccionar Visibles
+            </button>
+            <button class="btn btn-sm btn-ghost" id="btn-deselect-all">
+              <i class="fa-solid fa-square"></i> Deseleccionar Todos
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contacts Table Card -->
+      <div class="table-card">
+        <div class="table-summary-bar">
+          <span>Mostrando <strong id="table-showing-count">0</strong> de <strong id="table-total-count">0</strong> contactos</span>
+          <span class="selected-text"><i class="fa-solid fa-check-circle"></i> <strong id="table-selected-count">0</strong> seleccionados para envío</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="contacts-table" id="contacts-table">
+            <thead>
+              <tr>
+                <th width="40"><input type="checkbox" id="th-select-all"></th>
+                <th>Farmacia / Razón Social</th>
+                <th>Contacto</th>
+                <th>Correo Electrónico</th>
+                <th>WhatsApp / Móvil</th>
+                <th>Comuna / Dirección</th>
+              </tr>
+            </thead>
+            <tbody id="contacts-tbody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: CAMPAÑA WHATSAPP ==================== -->
+    <section id="tab-whatsapp" class="tab-pane">
+      <div class="view-header">
+        <div>
+          <h2>Enviar Ofertas de Productos por WhatsApp</h2>
+          <p>Envía mensajes personalizados y fotos a <strong class="badge-success" id="wa-target-count">0</strong> clientes con WhatsApp móvil.</p>
+        </div>
+        <div class="view-actions">
+          <button class="btn btn-outline" id="btn-load-prods-into-wa">
+            <i class="fa-solid fa-tags"></i> Cargar Productos Seleccionados al Mensaje
+          </button>
+          <button class="btn btn-success btn-lg" id="btn-start-wa-dispatcher">
+            <i class="fa-solid fa-circle-play"></i> Iniciar Despachador Guiado
+          </button>
+        </div>
+      </div>
+
+      <div class="campaign-layout">
+        <div class="editor-col">
+          <div class="card form-card">
+            <h3><i class="fa-brands fa-whatsapp text-success"></i> Redactor de WhatsApp</h3>
+
+            <div class="tags-helper">
+              <span>Insertar variables:</span>
+              <button type="button" class="tag-pill" data-wa-insert="{farmacia}"><i class="fa-solid fa-plus"></i> {farmacia}</button>
+              <button type="button" class="tag-pill" data-wa-insert="{contacto}"><i class="fa-solid fa-plus"></i> {contacto}</button>
+              <button type="button" class="tag-pill" data-wa-insert="{comuna}"><i class="fa-solid fa-plus"></i> {comuna}</button>
+            </div>
+
+            <div class="form-group">
+              <label for="wa-message-text">Mensaje de WhatsApp <span class="req">*</span></label>
+              <textarea id="wa-message-text" class="form-control font-mono" rows="10"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label><i class="fa-solid fa-image"></i> Foto de Producto o Catálogo (Opcional)</label>
+              <div class="dropzone dropzone-sm" id="wa-dropzone">
+                <i class="fa-solid fa-image"></i>
+                <p>Arrastra una foto o haz clic para subir</p>
+                <input type="file" id="wa-file-input" accept="image/*" style="display: none;">
+              </div>
+              <div id="wa-image-preview-container" class="wa-image-preview-box" style="display: none;">
+                <img id="wa-image-preview-img" src="" alt="Foto WhatsApp">
+                <button type="button" class="btn btn-sm btn-danger" id="btn-remove-wa-image">
+                  <i class="fa-solid fa-trash"></i> Quitar foto
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="preview-col">
+          <div class="card preview-card-wrapper">
+            <div class="preview-card-header">
+              <div class="preview-title"><i class="fa-brands fa-whatsapp"></i> Vista Previa en WhatsApp</div>
+              <div class="preview-contact-picker">
+                <span>Cliente:</span>
+                <select id="wa-preview-contact-select" class="custom-select select-sm"></select>
+              </div>
+            </div>
+
+            <div class="wa-phone-mockup">
+              <div class="wa-chat-header">
+                <div class="wa-avatar"><i class="fa-solid fa-user"></i></div>
+                <div class="wa-chat-info">
+                  <strong id="wa-mock-name">Cliente</strong>
+                  <span id="wa-mock-phone">+56 9 xxxx xxxx</span>
+                </div>
+              </div>
+
+              <div class="wa-chat-body">
+                <div class="wa-bubble">
+                  <div id="wa-mock-image-container" style="display: none;" class="wa-mock-image">
+                    <img id="wa-mock-img" src="" alt="Adjunto">
+                  </div>
+                  <div class="wa-bubble-text" id="wa-mock-text"></div>
+                  <div class="wa-bubble-time">
+                    <span id="wa-mock-time">12:30</span>
+                    <i class="fa-solid fa-check-double text-blue"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 5: CONFIGURACIÓN CORREO ==================== -->
+    <section id="tab-settings" class="tab-pane">
+      <div class="view-header">
+        <div>
+          <h2>Configuración del Servidor de Correo (SMTP)</h2>
+          <p>Conecta tu cuenta de Gmail, Outlook o correo corporativo para enviar los correos a tus clientes.</p>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+        <div class="card form-card">
+          <h3><i class="fa-solid fa-envelope-open-text"></i> Datos de Conexión</h3>
+
+          <div class="form-group">
+            <label for="smtp-provider">Proveedor de Correo</label>
+            <select id="smtp-provider" class="form-control">
+              <option value="gmail">Gmail / Google Workspace (Recomendado)</option>
+              <option value="outlook">Outlook / Hotmail / Office365</option>
+              <option value="custom">Servidor Propio / cPanel (SMTP Personalizado)</option>
+            </select>
+          </div>
+
+          <div class="row-2col">
+            <div class="form-group">
+              <label for="smtp-user">Tu Correo Electrónico <span class="req">*</span></label>
+              <input type="email" id="smtp-user" class="form-control" placeholder="ejemplo@gmail.com">
+            </div>
+            <div class="form-group">
+              <label for="smtp-pass">Contraseña o Clave de Aplicación <span class="req">*</span></label>
+              <div class="input-with-icon">
+                <input type="password" id="smtp-pass" class="form-control" placeholder="Clave de aplicación (16 letras)">
+                <button type="button" id="toggle-smtp-pass" class="btn-input-icon"><i class="fa-solid fa-eye"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="row-2col">
+            <div class="form-group">
+              <label for="smtp-from-name">Nombre Visible del Remitente</label>
+              <input type="text" id="smtp-from-name" class="form-control" value="Distribuidora La Ruta del Oriente">
+            </div>
+            <div class="form-group">
+              <label for="smtp-from-email">Correo Remitente</label>
+              <input type="email" id="smtp-from-email" class="form-control" placeholder="contacto@distribuidoralarutadeloriente.cl">
+            </div>
+          </div>
+
+          <div id="custom-smtp-fields" style="display: none;">
+            <div class="row-3col">
+              <div class="form-group">
+                <label for="smtp-host">Host / Servidor SMTP</label>
+                <input type="text" id="smtp-host" class="form-control" placeholder="mail.distribuidoralarutadeloriente.cl">
+              </div>
+              <div class="form-group">
+                <label for="smtp-port">Puerto</label>
+                <input type="number" id="smtp-port" class="form-control" value="465">
+              </div>
+              <div class="form-group">
+                <label for="smtp-secure">Seguridad SSL/TLS</label>
+                <select id="smtp-secure" class="form-control">
+                  <option value="true">SSL (Puerto 465)</option>
+                  <option value="false">TLS / STARTTLS (Puerto 587)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="smtp-delay">Intervalo entre envíos (Milisegundos)</label>
+            <input type="number" id="smtp-delay" class="form-control" value="1200" min="500" max="5000">
+            <small class="hint">1200 ms = 1.2 segundos entre correos para evitar filtros de spam.</small>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-primary" id="btn-save-smtp">
+              <i class="fa-solid fa-floppy-disk"></i> Guardar Configuración
+            </button>
+          </div>
+        </div>
+
+        <div class="card help-card">
+          <h3><i class="fa-solid fa-vial-circle-check"></i> Probar Conexión en Vivo</h3>
+          <p>Envía un correo de prueba a tu propio email para confirmar que todo está listo:</p>
+
+          <div class="test-email-box">
+            <input type="email" id="test-email-recipient" class="form-control" placeholder="Ingresa tu correo para recibir la prueba">
+            <button class="btn btn-outline" id="btn-test-email">
+              <i class="fa-solid fa-paper-plane"></i> Enviar Prueba
+            </button>
+          </div>
+          <div id="test-result-box" class="test-result-box" style="display: none;"></div>
+
+          <hr class="divider">
+
+          <div class="gmail-instructions">
+            <h4><i class="fa-brands fa-google text-red"></i> ¿Cómo usar Gmail fácilmente?</h4>
+            <ol>
+              <li>Entra a: <a href="https://myaccount.google.com/apppasswords" target="_blank">myaccount.google.com/apppasswords <i class="fa-solid fa-arrow-up-right-from-square"></i></a></li>
+              <li>Escribe el nombre <code>RutaOriente</code> y pulsa <em>Crear</em>.</li>
+              <li>Copia la clave de 16 caracteres y pégala en el campo <strong>Contraseña</strong>.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 6: HISTORIAL ==================== -->
+    <section id="tab-history" class="tab-pane">
+      <div class="view-header">
+        <div>
+          <h2>Historial de Envíos Realizados</h2>
+          <p>Registro de campañas enviadas y auditoría de entregas.</p>
+        </div>
+        <div class="view-actions">
+          <button class="btn btn-outline" id="btn-refresh-history">
+            <i class="fa-solid fa-rotate-right"></i> Actualizar
+          </button>
+        </div>
+      </div>
+
+      <div class="card table-card">
+        <div class="table-responsive">
+          <table class="contacts-table" id="history-table">
+            <thead>
+              <tr>
+                <th>Fecha y Hora</th>
+                <th>Canal</th>
+                <th>Asunto / Detalle</th>
+                <th>Productos</th>
+                <th>Destinatarios</th>
+                <th>Exitosos</th>
+                <th>Fallidos</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody">
+              <tr>
+                <td colspan="7" class="text-center py-4 text-muted">Cargando historial...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODAL: NUEVO PRODUCTO ==================== -->
+  <div class="modal-overlay" id="product-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-box-open text-gold"></i> Agregar / Editar Producto</h3>
+        <button class="btn-close" id="btn-close-prod-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="product-form">
+          <input type="hidden" id="prod-id">
+
+          <div class="form-group">
+            <label for="prod-name">Nombre del Producto <span class="req">*</span></label>
+            <input type="text" id="prod-name" class="form-control" placeholder="Ej: Corega Ultra Crema 70g Sin Sabor" required>
+          </div>
+
+          <div class="row-2col">
+            <div class="form-group">
+              <label for="prod-category">Categoría</label>
+              <input type="text" id="prod-category" class="form-control" placeholder="Cuidado Bucal, Adulto Mayor, Aseo..." value="General">
+            </div>
+            <div class="form-group">
+              <label for="prod-url">Enlace en La Ruta del Oriente</label>
+              <input type="url" id="prod-url" class="form-control" value="https://distribuidoralarutadeloriente.cl">
+            </div>
+          </div>
+
+          <div class="row-2col">
+            <div class="form-group">
+              <label for="prod-normal-price">Precio Normal ($)</label>
+              <input type="number" id="prod-normal-price" class="form-control" placeholder="Ej: 8990">
+            </div>
+            <div class="form-group">
+              <label for="prod-offer-price">Precio Oferta / Mayorista ($) <span class="req">*</span></label>
+              <input type="number" id="prod-offer-price" class="form-control" placeholder="Ej: 7290" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Foto del Producto</label>
+            <div class="row-2col" style="align-items: center;">
+              <input type="file" id="prod-file-input" accept="image/*" class="form-control">
+              <input type="text" id="prod-image-url" class="form-control" placeholder="O pega enlace de foto (URL)">
+            </div>
+            <div id="prod-image-preview" style="margin-top: 10px; display: none;">
+              <img id="prod-preview-img" src="" alt="Vista previa" style="max-height: 80px; border-radius: 6px; border: 1px solid #e2e8f0;">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="prod-description">Breve Descripción / Presentación</label>
+            <input type="text" id="prod-description" class="form-control" placeholder="Ej: Formato caja 24 unidades, entrega inmediata.">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" id="btn-cancel-prod">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btn-save-prod">
+          <i class="fa-solid fa-floppy-disk"></i> Guardar Producto
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: ENVÍO MASIVO EN PROGRESO ==================== -->
+  <div class="modal-overlay" id="email-send-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-paper-plane text-gold"></i> Envío Masivo en Progreso</h3>
+        <button class="btn-close" id="btn-close-send-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="campaign-progress-info">
+          <div class="progress-stats">
+            <div>Progreso: <strong id="prog-current">0</strong> / <strong id="prog-total">0</strong></div>
+            <div>Exitosos: <strong id="prog-success" class="text-success">0</strong> | Errores: <strong id="prog-failed" class="text-danger">0</strong></div>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="prog-bar-fill" style="width: 0%;"></div>
+          </div>
+          <p class="progress-percentage" id="prog-percent">0%</p>
+        </div>
+
+        <div class="live-logs-container">
+          <h4>Registro en Tiempo Real:</h4>
+          <div class="live-logs-box" id="send-live-logs">
+            <div class="log-item log-info">Iniciando despachador de correos...</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="btn-stop-campaign">
+          <i class="fa-solid fa-stop"></i> Detener Envío
+        </button>
+        <button class="btn btn-outline" id="btn-done-campaign" style="display: none;">
+          <i class="fa-solid fa-check"></i> Finalizar y Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: COLA ASISTIDA DE WHATSAPP ==================== -->
+  <div class="modal-overlay" id="wa-queue-modal">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3><i class="fa-brands fa-whatsapp text-success"></i> Despachador de Ofertas por WhatsApp</h3>
+        <button class="btn-close" id="btn-close-wa-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="wa-queue-status-bar">
+          <div>Contacto actual: <strong id="wa-queue-current-idx">1</strong> de <strong id="wa-queue-total">0</strong></div>
+          <div class="progress-bar-bg w-200">
+            <div class="progress-bar-fill fill-success" id="wa-queue-bar" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div class="wa-queue-card">
+          <div class="wa-queue-client-card">
+            <div class="client-icon"><i class="fa-solid fa-clinic-medical"></i></div>
+            <div class="client-details">
+              <h3 id="wa-q-farmacia">Farmacia</h3>
+              <p id="wa-q-contacto">Contacto</p>
+              <div class="phone-highlight">
+                <i class="fa-brands fa-whatsapp"></i> <span id="wa-q-phone">+56 9 xxxx xxxx</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="wa-queue-message-box">
+            <div class="box-title">Mensaje con Ofertas:</div>
+            <div class="box-content" id="wa-q-msg-content">...</div>
+          </div>
+
+          <div class="wa-queue-actions">
+            <a href="#" target="_blank" class="btn btn-success btn-lg" id="btn-wa-open-chat">
+              <i class="fa-brands fa-whatsapp"></i> Abrir Chat en WhatsApp Web
+            </a>
+            <button class="btn btn-outline" id="btn-wa-copy-msg">
+              <i class="fa-solid fa-copy"></i> Copiar Mensaje
+            </button>
+            <button class="btn btn-primary" id="btn-wa-next">
+              <i class="fa-solid fa-forward"></i> Marcar Enviado y Siguiente &raquo;
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btn-wa-skip">Saltar este contacto</button>
+        <button class="btn btn-outline" id="btn-close-wa-queue">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="js/envios.js"></script>
+</body>
+</html>

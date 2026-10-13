@@ -7,7 +7,8 @@ const FIREBASE_CONFIG = {
   appId: '1:18647063099:web:d25d090a14a71603a51a1e'
 };
 
-const AUTHORIZED_ADMIN_EMAIL = 'elsakitodewea@gmail.com';
+const AUTHORIZED_ADMIN_EMAILS = ['distribuidorarutadeloriente@gmail.com', 'elsakitodewea@gmail.com'];
+const AUTHORIZED_ADMIN_EMAIL = 'distribuidorarutadeloriente@gmail.com';
 
 const FIRESTORE_PRODUCTS_COLLECTION = 'products';
 const FIRESTORE_ORDERS_COLLECTION = 'webpay_orders';
@@ -497,16 +498,23 @@ function setAdminAuthStatus(message, isError = false) {
 }
 
 function isAuthorizedAdminUser(user) {
+  const email = normalizeTextValue(user?.email || '');
   return Boolean(
-    user &&
-    user.emailVerified &&
-    normalizeTextValue(user.email) === normalizeTextValue(AUTHORIZED_ADMIN_EMAIL)
+    user && (
+      email.endsWith('@distribuidoralarutadeloriente.cl') ||
+      email === 'distribuidorarutadeloriente@gmail.com' ||
+      email === 'elsakitodewea@gmail.com'
+    )
   );
 }
 
 function isAdminEmail(userOrEmail) {
-  const email = typeof userOrEmail === 'string' ? userOrEmail : userOrEmail?.email;
-  return normalizeTextValue(email) === normalizeTextValue(AUTHORIZED_ADMIN_EMAIL);
+  const email = normalizeTextValue(typeof userOrEmail === 'string' ? userOrEmail : userOrEmail?.email || '');
+  return (
+    email.endsWith('@distribuidoralarutadeloriente.cl') ||
+    email === 'distribuidorarutadeloriente@gmail.com' ||
+    email === 'elsakitodewea@gmail.com'
+  );
 }
 
 function buildAdminVerificationActionSettings() {
@@ -553,24 +561,38 @@ function mapAdminAuthError(error) {
 }
 
 async function signInAdminWithEmailPassword(email, password) {
+  await initFirebaseApp();
   const auth = window.firebase.auth();
-  const user = await signInForVerificationEmail(email, password);
+  let user;
 
-  if (!user.emailVerified) {
-    try {
-      await sendVerificationEmailToUser(user);
-    } finally {
-      await auth.signOut();
+  try {
+    const creds = await auth.signInWithEmailAndPassword(email, password);
+    user = creds.user;
+  } catch (err) {
+    console.warn('Intento de login con Firebase:', err.code, err.message);
+    if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-login-credentials') {
+      // Si la cuenta aún no existe en Firebase Auth, la registramos automáticamente con la contraseña ingresada
+      try {
+        console.log('Registrando cuenta de administrador por primera vez en Firebase...');
+        const newCreds = await auth.createUserWithEmailAndPassword(email, password);
+        user = newCreds.user;
+        setAdminAuthNotice('¡Cuenta creada y activada exitosamente en Firebase!', 'success');
+      } catch (createErr) {
+        if (createErr.code === 'auth/email-already-in-use') {
+          throw new Error('La contraseña ingresada no es correcta para ' + email + '.');
+        } else if (createErr.code === 'auth/weak-password') {
+          throw new Error('La contraseña debe tener al menos 6 caracteres.');
+        }
+        throw err;
+      }
+    } else {
+      throw err;
     }
-
-    const verificationError = new Error('La cuenta existe, pero el correo todavía no está verificado. Te reenviamos un correo de verificación. Revisa entrada, spam y promociones.');
-    verificationError.code = 'admin/email-not-verified';
-    throw verificationError;
   }
 
   if (!isAuthorizedAdminUser(user)) {
     await auth.signOut();
-    throw new Error('La cuenta no corresponde a un administrador autorizado o el correo no está verificado.');
+    throw new Error('La cuenta no corresponde a un administrador autorizado.');
   }
 
   return user;
@@ -588,7 +610,7 @@ async function resendAdminVerificationEmail() {
 
   if (!isAdminEmail(email)) {
     clearAdminAuthNotice();
-    setAdminAuthError(`Solo ${AUTHORIZED_ADMIN_EMAIL} puede administrar el catálogo.`);
+    setAdminAuthError(`Solo cuentas autorizadas (@distribuidoralarutadeloriente.cl o distribuidorarutadeloriente@gmail.com) pueden ingresar.`);
     return;
   }
 
@@ -600,7 +622,7 @@ async function resendAdminVerificationEmail() {
     const user = await signInForVerificationEmail(email, password);
     if (user.emailVerified) {
       await window.firebase.auth().signOut();
-      setAdminAuthNotice('Ese correo ya está verificado. Si no puedes entrar, el problema ya no es la verificación: revisa la contraseña o si estás usando exactamente elsakitodewea@gmail.com.', 'success');
+      setAdminAuthNotice('Ese correo ya está verificado. Si no puedes entrar, el problema ya no es la verificación: revisa la contraseña o si estás usando exactamente distribuidorarutadeloriente@gmail.com.', 'success');
       setAdminAuthStatus('Ese correo ya está verificado. Ya puedes iniciar sesión en el admin.', false);
       return;
     }
@@ -657,17 +679,11 @@ async function ensureAuthorizedAdminSession() {
     throw authError;
   }
 
-  await user.reload();
+  await user.reload().catch(() => {});
   const refreshedUser = window.firebase.auth().currentUser || user;
 
-  if (!refreshedUser.emailVerified) {
-    const verificationError = new Error('Tu cuenta admin todavía no tiene el correo verificado.');
-    verificationError.code = 'admin/email-not-verified';
-    throw verificationError;
-  }
-
   if (!isAuthorizedAdminUser(refreshedUser)) {
-    const adminError = new Error(`Solo ${AUTHORIZED_ADMIN_EMAIL} puede guardar cambios en el catálogo.`);
+    const adminError = new Error("Solo las cuentas autorizadas (@distribuidoralarutadeloriente.cl o distribuidorarutadeloriente@gmail.com) pueden guardar cambios en el catálogo.");
     adminError.code = 'admin/not-authorized';
     throw adminError;
   }
@@ -683,7 +699,7 @@ function mapProductPersistenceError(error) {
     case 'admin/email-not-verified':
       return 'La cuenta existe, pero el correo todavía no está verificado. Verifica el correo y luego guarda de nuevo.';
     case 'admin/not-authorized':
-      return `Solo ${AUTHORIZED_ADMIN_EMAIL} puede guardar cambios en el catálogo.`;
+      return 'Solo las cuentas autorizadas (@distribuidoralarutadeloriente.cl o distribuidorarutadeloriente@gmail.com) pueden guardar cambios en el catálogo.';
     case 'permission-denied':
       return 'Firestore rechazó la escritura. La sesión admin expiró o no cumple las reglas actuales.';
     case 'unavailable':
@@ -931,8 +947,9 @@ async function checkAdminPassword() {
     return;
   }
 
-  if (normalizeTextValue(email) !== normalizeTextValue(AUTHORIZED_ADMIN_EMAIL)) {
-    setAdminAuthError(`Solo ${AUTHORIZED_ADMIN_EMAIL} puede administrar el catálogo.`);
+  const isAuthorized = isAdminEmail(email);
+  if (!isAuthorized) {
+    setAdminAuthError('Solo cuentas autorizadas (@distribuidoralarutadeloriente.cl o distribuidorarutadeloriente@gmail.com) pueden ingresar.');
     return;
   }
 
@@ -943,7 +960,7 @@ async function checkAdminPassword() {
   try {
     await signInAdminWithEmailPassword(email, password);
     sessionStorage.setItem('adminAuthenticated', 'true');
-    setAdminAuthStatus(`Sesión iniciada como ${AUTHORIZED_ADMIN_EMAIL}.`, false);
+    setAdminAuthStatus(`Sesión iniciada como ${email}.`, false);
     showAdminPanel();
     renderAdminProducts();
     await loadAdminOrders();
@@ -1426,3 +1443,33 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   showAdminLogin();
 });
+
+async function sendAdminPasswordReset() {
+  const email = document.getElementById('admin-email')?.value.trim() || 'distribuidorarutadeloriente@gmail.com';
+  try {
+    await initFirebaseApp();
+    await window.firebase.auth().sendPasswordResetEmail(email);
+    alert('¡Enlace de restablecimiento enviado! Revisa tu bandeja de entrada o spam en ' + email + ' para definir tu contraseña.');
+  } catch (e) {
+    alert('No fue posible enviar el restablecimiento: ' + e.message);
+  }
+}
+
+
+async function resetAdminPassword() {
+  const email = document.getElementById('admin-email')?.value.trim() || '';
+  if (!email) {
+    setAdminAuthError('Por favor escribe tu correo para enviarte el enlace de restablecimiento.');
+    return;
+  }
+  try {
+    await initFirebaseApp();
+    const auth = window.firebase.auth();
+    auth.languageCode = 'es';
+    await auth.sendPasswordResetEmail(email);
+    setAdminAuthNotice('Se envió un correo a ' + email + ' con el enlace para crear una nueva contraseña. Revisa bandeja de entrada y spam.', 'success');
+  } catch (err) {
+    setAdminAuthError('No se pudo enviar el correo de recuperación: ' + (err.message || err.code));
+  }
+}
+window.resetAdminPassword = resetAdminPassword;
