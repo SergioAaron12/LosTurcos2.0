@@ -123,6 +123,70 @@ for (let i = 3; i < rawRows.length; i++) {
   });
 }
 
+// Incorporar contactos personalizados / talleres (ej: Mechlook SpA)
+const customCandidates = [
+  path.join('C:', 'app_datosacorreo', 'data', 'custom_contacts.json'),
+  path.resolve(__dirname, '..', 'public', 'data', 'custom_contacts.json'),
+  path.resolve(__dirname, '..', 'data', 'custom_contacts.json')
+];
+
+let customList = [];
+for (const p of customCandidates) {
+  if (fs.existsSync(p)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(p, 'utf8'));
+      if (Array.isArray(parsed) && parsed.length) {
+        customList = parsed;
+        console.log(`📁 Contactos personalizados cargados desde: ${p} (${parsed.length} registros)`);
+        break;
+      }
+    } catch (e) {
+      console.warn(`Error al leer ${p}:`, e.message);
+    }
+  }
+}
+
+const customFormatted = [];
+if (customList.length) {
+  const seenIds = new Set();
+  for (const c of customList) {
+    const id = c.id || `custom_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+    if (seenIds.has(id)) continue;
+    seenIds.add(id);
+
+    const rawTelefono = c.telefono || c.telefonoOriginal || '';
+    const phoneInfo = normalizePhone(rawTelefono);
+    const rawCorreo = c.correo || '';
+    const hasValidEmail = Boolean(rawCorreo && rawCorreo.includes('@') && rawCorreo.includes('.'));
+
+    customFormatted.push({
+      id,
+      rowIndex: 0,
+      rut: c.rut || '',
+      sucursal: c.sucursal || '',
+      nombreFarmacia: c.nombreFarmacia || c.nombre || 'Taller MechLook',
+      direccion: c.direccion || '',
+      comuna: c.comuna || 'Santiago',
+      claseComercio: c.claseComercio || 'Taller Mecánico / Especial',
+      telefonoOriginal: rawTelefono,
+      telefonoDisplay: phoneInfo.display,
+      whatsAppNumero: phoneInfo.cleanNumber,
+      telefonoTipo: phoneInfo.type,
+      tieneWhatsApp: phoneInfo.isWhatsApp,
+      correo: rawCorreo,
+      tieneEmail: hasValidEmail,
+      contacto: c.contacto || '',
+      suspendido: '',
+      isCustom: true,
+      createdAt: c.createdAt || new Date().toISOString()
+    });
+  }
+
+  // Prepend custom contacts to the beginning so they appear at the top
+  contacts.unshift(...customFormatted);
+  console.log(`✅ ${customFormatted.length} talleres/contactos personalizados agregados al inicio del listado.`);
+}
+
 const comunas = [...new Set(contacts.map(c => c.comuna).filter(Boolean))].sort();
 const stats = {
   total: contacts.length,
@@ -131,16 +195,33 @@ const stats = {
   conAmbos: contacts.filter(c => c.tieneEmail && c.tieneWhatsApp).length
 };
 
-const outputDir = path.resolve(__dirname, '..', 'public', 'data');
-if (!fs.existsSync(outputDir)) {
-  fs.mkdirSync(outputDir, { recursive: true });
-}
+const payload = JSON.stringify({ success: true, stats, comunas, contacts }, null, 2);
 
-const outputPath = path.join(outputDir, 'contacts.json');
-fs.writeFileSync(outputPath, JSON.stringify({ success: true, stats, comunas, contacts }, null, 2), 'utf8');
+// Escribir en todos los destinos necesarios
+const targetDirs = [
+  path.resolve(__dirname, '..', 'public', 'data'),
+  path.resolve(__dirname, '..', 'public', 'movil', 'data'),
+  path.join('C:', 'laruta', 'www', 'data'),
+  path.join('C:', 'laruta', 'data')
+];
 
-console.log('✅ Contactos actualizados con éxito en public/data/contacts.json:');
-console.log(`   - Total registros: ${stats.total}`);
+targetDirs.forEach(dir => {
+  try {
+    if (fs.existsSync(path.dirname(dir))) {
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'contacts.json'), payload, 'utf8');
+      if (customList.length) {
+        fs.writeFileSync(path.join(dir, 'custom_contacts.json'), JSON.stringify(customList, null, 2), 'utf8');
+      }
+      console.log(`💾 Actualizado contacts.json en: ${dir}`);
+    }
+  } catch (err) {
+    console.warn(`No se pudo escribir en ${dir}:`, err.message);
+  }
+});
+
+console.log('✅ Contactos actualizados con éxito:');
+console.log(`   - Total registros: ${stats.total} (incluye ${customFormatted.length} talleres/personalizados)`);
 console.log(`   - Con correo: ${stats.conEmail}`);
 console.log(`   - Con WhatsApp (+56 9): ${stats.conWhatsApp}`);
 console.log(`   - Comunas cubiertas: ${comunas.length}`);

@@ -50,14 +50,18 @@ body {
   position: sticky;
   top: 0;
   z-index: 90;
-  background: rgba(11, 12, 16, 0.95);
+  background: rgba(11, 12, 16, 0.98);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--dark-border);
-  padding: 10px 16px;
+  padding-top: max(env(safe-area-inset-top, 0px), 38px);
+  padding-bottom: 12px;
+  padding-left: 16px;
+  padding-right: 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 .m-brand {

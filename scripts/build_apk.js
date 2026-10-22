@@ -101,6 +101,13 @@ if (fs.existsSync(manifestPath)) {
   }
 }
 
+// 6.1 Asegurar estilos de Android y barra de estado
+try {
+  execSync('node scripts\\fix_styles.js', { cwd: WORKSPACE_DIR, stdio: 'inherit' });
+} catch (e) {
+  console.warn('Advertencia al configurar styles.xml:', e.message);
+}
+
 // 7. Compilar APK con Gradle
 console.log('🔨 Compilando APK con Gradle Wrapper (assembleDebug)...');
 const gradlewCmd = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';

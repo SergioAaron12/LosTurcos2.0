@@ -1,0 +1,24 @@
+[
+  {
+    "id": "custom_1791523799894",
+    "nombreFarmacia": "Mechlook SpA",
+    "contacto": "Sergio Peña",
+    "correo": "mechlookadmin@gmail.com",
+    "telefono": "945621740",
+    "comuna": "recoleta,santiago",
+    "direccion": "Sofia, 2762",
+    "rut": "",
+    "createdAt": "2026-10-09T05:29:59.894Z"
+  },
+  {
+    "id": "custom_1792644737760",
+    "nombreFarmacia": "MechLook SpA",
+    "contacto": "Sergio Peña",
+    "correo": "sergioaaron92@gmail.com",
+    "telefono": "+56945621740",
+    "comuna": "Santiago",
+    "direccion": "Las Torres 3268, Recoleta, Chile",
+    "rut": "",
+    "createdAt": "2026-10-22T04:52:17.760Z"
+  }
+]

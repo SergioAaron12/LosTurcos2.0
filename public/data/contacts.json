@@ -1,10 +1,10 @@
 {
   "success": true,
   "stats": {
-    "total": 773,
-    "conEmail": 719,
-    "conWhatsApp": 546,
-    "conAmbos": 523
+    "total": 775,
+    "conEmail": 721,
+    "conWhatsApp": 548,
+    "conAmbos": 525
   },
   "comunas": [
     "BUIN",
@@ -47,12 +47,56 @@
     "SAN RAMON",
     "SANTIAGO",
     "SANTIAGO(CENTRO)",
+    "Santiago",
     "VERIFICAR Podría ser Santiago o Quinta Normal",
     "VERIFICAR Posiblemente Puente Alto",
     "VITACURA",
+    "recoleta,santiago",
     "ÑUÑOA"
   ],
   "contacts": [
+    {
+      "id": "custom_1791523799894",
+      "rowIndex": 0,
+      "rut": "",
+      "sucursal": "",
+      "nombreFarmacia": "Mechlook SpA",
+      "direccion": "Sofia, 2762",
+      "comuna": "recoleta,santiago",
+      "claseComercio": "Taller Mecánico / Especial",
+      "telefonoOriginal": "945621740",
+      "telefonoDisplay": "+56 9 4562 1740",
+      "whatsAppNumero": "56945621740",
+      "telefonoTipo": "mobile",
+      "tieneWhatsApp": true,
+      "correo": "mechlookadmin@gmail.com",
+      "tieneEmail": true,
+      "contacto": "Sergio Peña",
+      "suspendido": "",
+      "isCustom": true,
+      "createdAt": "2026-10-09T05:29:59.894Z"
+    },
+    {
+      "id": "custom_1792644737760",
+      "rowIndex": 0,
+      "rut": "",
+      "sucursal": "",
+      "nombreFarmacia": "MechLook SpA",
+      "direccion": "Las Torres 3268, Recoleta, Chile",
+      "comuna": "Santiago",
+      "claseComercio": "Taller Mecánico / Especial",
+      "telefonoOriginal": "+56945621740",
+      "telefonoDisplay": "+56 9 4562 1740",
+      "whatsAppNumero": "56945621740",
+      "telefonoTipo": "mobile",
+      "tieneWhatsApp": true,
+      "correo": "sergioaaron92@gmail.com",
+      "tieneEmail": true,
+      "contacto": "Sergio Peña",
+      "suspendido": "",
+      "isCustom": true,
+      "createdAt": "2026-10-22T04:52:17.760Z"
+    },
     {
       "id": "cli_3",
       "rowIndex": 3,

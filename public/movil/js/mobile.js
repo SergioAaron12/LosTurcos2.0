@@ -13,6 +13,20 @@ const FIREBASE_CONFIG = {
 
 const LOCAL_API_BASE = 'http://localhost:3000';
 
+// Detectar entorno APK nativo o PWA para ajuste de barra de estado
+try {
+  if (
+    (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) ||
+    window.location.protocol === 'capacitor:' ||
+    (window.location.protocol === 'https:' && window.location.hostname === 'localhost') ||
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  ) {
+    document.documentElement.classList.add('is-native-app');
+    document.body?.classList.add('is-native-app');
+  }
+} catch (e) {}
+
 const mState = {
   contacts: [],
   filteredContacts: [],
@@ -281,15 +295,21 @@ function renderMobileContactsList() {
 
   container.innerHTML = slice.map(c => {
     const isSelected = mState.selectedContactIds.has(c.id);
+    const isTaller = c.isCustom || 
+                     (c.nombreFarmacia && (c.nombreFarmacia.toLowerCase().includes('mechlook') || c.nombreFarmacia.toLowerCase().includes('taller'))) ||
+                     (c.claseComercio && c.claseComercio.toLowerCase().includes('taller'));
     const waLink = c.whatsAppNumero 
       ? `https://wa.me/${c.whatsAppNumero}?text=${encodeURIComponent('Hola ' + (c.contacto || c.nombreFarmacia) + ', te saludamos de Distribuidora La Ruta del Oriente!')}`
       : (c.telefonoDisplay ? `tel:${c.telefonoDisplay}` : null);
 
     return `
-      <div class="m-contact-card ${isSelected ? 'selected' : ''}" data-id="${c.id}">
+      <div class="m-contact-card ${isSelected ? 'selected' : ''} ${isTaller ? 'is-taller' : ''}" data-id="${c.id}" ${isTaller ? 'style="border: 1px solid rgba(244,197,66,0.4); background: linear-gradient(145deg, #181c26 0%, #1a1e2a 100%);"' : ''}>
         <div class="m-contact-top">
           <div class="m-contact-info" onclick="toggleContactSelection('${c.id}')">
-            <h4>${c.nombreFarmacia || 'Farmacia'}</h4>
+            <h4 style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              ${c.nombreFarmacia || 'Farmacia'}
+              ${isTaller ? `<span class="m-badge" style="background: rgba(244,197,66,0.18); color: #f4c542; border: 1px solid rgba(244,197,66,0.5); font-size: 9px; padding: 2px 6px;"><i class="fa-solid fa-wrench"></i> Taller</span>` : ''}
+            </h4>
             <p><i class="fa-regular fa-user"></i> ${c.contacto || 'Sin contacto'} &bull; ${c.comuna || 'Santiago'}</p>
           </div>
           <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleContactSelection('${c.id}')" style="width: 20px; height: 20px; accent-color: #f4c542;">
@@ -333,7 +353,10 @@ function filterMobileContacts() {
       const match = (c.nombreFarmacia || '').toLowerCase().includes(q) ||
                     (c.contacto || '').toLowerCase().includes(q) ||
                     (c.comuna || '').toLowerCase().includes(q) ||
-                    (c.correo || '').toLowerCase().includes(q);
+                    (c.claseComercio || '').toLowerCase().includes(q) ||
+                    (c.correo || '').toLowerCase().includes(q) ||
+                    (c.telefonoDisplay || '').includes(q) ||
+                    (c.whatsAppNumero || '').includes(q);
       if (!match) return false;
     }
     return true;
