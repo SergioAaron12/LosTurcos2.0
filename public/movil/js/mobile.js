@@ -19,7 +19,7 @@ const mState = {
   selectedContactIds: new Set(),
   products: [],
   selectedProductIds: new Set(),
-  activeTab: 'm-tab-campaign',
+  activeTab: 'm-tab-whatsapp',
   activeFilter: 'all',
   waIndex: 0,
   waList: []
@@ -82,7 +82,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   setupNavigationTabs();
   setupEventListeners();
-  updateMobileApkButtons();
 });
 
 function isAuthorizedAdmin(user) {
@@ -117,12 +116,30 @@ function setupNavigationTabs() {
 }
 
 // ================= PRODUCTS =================
+const COREGA_PRODUCT_IMAGES = {
+  corega_max_bloqueo: 'img/products/corega_maximo_sellado_70g.jpg',
+  corega_max_fijacion: 'img/products/corega_maximo_menta_70g.jpg',
+  corega_sin_sabor: 'img/products/corega_sin_sabor_70g.jpg',
+  corega_sabor_menta: 'img/products/corega_menta_70g.jpg'
+};
+
+function getProductImage(p) {
+  if (!p) return 'img/products/corega_maximo_sellado_70g.jpg';
+  if (p.image && !p.image.includes('corega1') && !p.image.includes('corega2') && !p.image.includes('corega3') && !p.image.includes('corega4')) {
+    return p.image;
+  }
+  if (p.imageUrl && !p.imageUrl.includes('corega1')) {
+    return p.imageUrl;
+  }
+  return COREGA_PRODUCT_IMAGES[p.id] || 'img/products/corega_maximo_sellado_70g.jpg';
+}
+
 async function loadMobileProducts() {
   const fallbackProducts = [
-    { id: 'corega_max_bloqueo', name: 'Corega Max Bloqueo 70g', normalPrice: 8990, offerPrice: 7290, stock: 120, image: '/asset/corega1.png' },
-    { id: 'corega_max_fijacion', name: 'Corega Max Fijación + Confort 70g', normalPrice: 8990, offerPrice: 7290, stock: 120, image: '/asset/corega2.png' },
-    { id: 'corega_sin_sabor', name: 'Corega Ultra Crema Sin Sabor 70g', normalPrice: 8490, offerPrice: 6890, stock: 150, image: '/asset/corega3.png' },
-    { id: 'corega_sabor_menta', name: 'Corega Ultra Crema Sabor Menta 70g', normalPrice: 8490, offerPrice: 6890, stock: 150, image: '/asset/corega4.png' }
+    { id: 'corega_max_bloqueo', name: 'Corega Max Bloqueo 70g', normalPrice: 8990, offerPrice: 7290, stock: 120, image: 'img/products/corega_maximo_sellado_70g.jpg' },
+    { id: 'corega_max_fijacion', name: 'Corega Max Fijación + Confort 70g', normalPrice: 8990, offerPrice: 7290, stock: 120, image: 'img/products/corega_maximo_menta_70g.jpg' },
+    { id: 'corega_sin_sabor', name: 'Corega Ultra Crema Sin Sabor 70g', normalPrice: 8490, offerPrice: 6890, stock: 150, image: 'img/products/corega_sin_sabor_70g.jpg' },
+    { id: 'corega_sabor_menta', name: 'Corega Ultra Crema Sabor Menta 70g', normalPrice: 8490, offerPrice: 6890, stock: 150, image: 'img/products/corega_menta_70g.jpg' }
   ];
 
   try {
@@ -148,10 +165,11 @@ function renderMobileProductsPicker() {
   container.innerHTML = mState.products.map(p => {
     const isSelected = mState.selectedProductIds.has(p.id);
     const priceFmt = (p.offerPrice || p.normalPrice || 0).toLocaleString('es-CL');
+    const imgSrc = getProductImage(p);
     return `
       <div class="m-prod-chip ${isSelected ? 'selected' : ''}" onclick="toggleMobileProd('${p.id}')">
         <div class="m-prod-chip-img">
-          <img src="${p.image || p.imageUrl || '/asset/corega1.png'}" alt="${p.name}">
+          <img src="${imgSrc}" alt="${p.name}" onerror="this.onerror=null; this.src='https://distribuidoralarutadeloriente.cl/' + '${imgSrc}';">
         </div>
         <div class="m-prod-chip-name">${p.name}</div>
         <div class="m-prod-chip-price">$${priceFmt}</div>
@@ -179,15 +197,16 @@ function renderMobileCatalog() {
 
   container.innerHTML = mState.products.map(p => {
     const priceFmt = (p.offerPrice || p.normalPrice || 0).toLocaleString('es-CL');
+    const imgSrc = getProductImage(p);
     return `
-      <div class="m-card" style="display: flex; gap: 12px; align-items: center;">
-        <div style="width: 70px; height: 70px; background: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 4px;">
-          <img src="${p.image || p.imageUrl || '/asset/corega1.png'}" style="max-width: 90%; max-height: 90%; object-fit: contain;">
+      <div class="m-card" style="display: flex; gap: 14px; align-items: center; border: 1px solid rgba(244,197,66,0.25); background: #13151b; border-radius: 14px; padding: 12px; margin-bottom: 10px;">
+        <div style="width: 76px; height: 76px; background: #ffffff; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+          <img src="${imgSrc}" alt="${p.name}" style="max-width: 95%; max-height: 95%; object-fit: contain;" onerror="this.onerror=null; this.src='https://distribuidoralarutadeloriente.cl/' + '${imgSrc}';">
         </div>
-        <div style="flex: 1;">
-          <h4 style="font-size: 13px; font-weight: 800; color: #fff;">${p.name}</h4>
-          <div style="font-size: 15px; font-weight: 800; color: #f4c542; margin: 4px 0;">$${priceFmt}</div>
-          <div style="font-size: 10px; color: #4ade80;">🟢 Stock: ${p.stock || 100} un.</div>
+        <div style="flex: 1; min-width: 0;">
+          <h4 style="font-size: 13px; font-weight: 800; color: #fff; margin-bottom: 3px; line-height: 1.3;">${p.name}</h4>
+          <div style="font-size: 16px; font-weight: 800; color: #f4c542; margin: 3px 0;">$${priceFmt}</div>
+          <div style="font-size: 11px; color: #4ade80; font-weight: 600;">🟢 Stock: ${p.stock || 100} un.</div>
         </div>
       </div>
     `;
@@ -231,6 +250,20 @@ async function loadMobileContacts() {
   renderMobileContactsList();
   populateMobileComunas();
   updateMobileHeaderStats();
+}
+
+function updateMobileHeaderStats() {
+  const total = mState.contacts.length || 773;
+  const wa = mState.contacts.filter(c => c.tieneWhatsApp).length || 684;
+  const prods = mState.products.length || 4;
+
+  const totalEl = document.getElementById('m-stat-total');
+  const waEl = document.getElementById('m-stat-wa');
+  const prodsEl = document.getElementById('m-stat-prods');
+
+  if (totalEl) totalEl.textContent = total;
+  if (waEl) waEl.textContent = wa;
+  if (prodsEl) prodsEl.textContent = prods;
 }
 
 function renderMobileContactsList() {
@@ -562,46 +595,4 @@ function setupEventListeners() {
   });
 }
 
-// ================= APK DRIVE SYSTEM (MOBILE) =================
-const DEFAULT_MOBILE_APK_URL = 'https://drive.google.com/file/d/133mJoUHWGUhyIpG4jm2th1lrYFxGWN00/view?usp=sharing';
-
-function getMobileApkDriveUrl() {
-  return localStorage.getItem('laruta_apk_drive_url') || DEFAULT_MOBILE_APK_URL;
-}
-
-function resolveMobileDriveUrl(rawUrl) {
-  if (!rawUrl) return DEFAULT_MOBILE_APK_URL;
-  const match = rawUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || rawUrl.match(/id=([a-zA-Z0-9_-]+)/);
-  if (match && match[1]) {
-    return `https://drive.google.com/uc?export=download&id=${match[1]}`;
-  }
-  return rawUrl;
-}
-
-function updateMobileApkButtons() {
-  const url = getMobileApkDriveUrl();
-  const downloadUrl = resolveMobileDriveUrl(url);
-
-  const btnHeader = document.getElementById('m-btn-apk-header');
-  const btnTab = document.getElementById('m-btn-apk-tab');
-
-  if (btnHeader) btnHeader.href = downloadUrl;
-  if (btnTab) btnTab.href = downloadUrl;
-}
-
-function promptMobileApkDriveUrl() {
-  const current = localStorage.getItem('laruta_apk_drive_url') || '';
-  const input = prompt('Ingresa el enlace de Google Drive de tu archivo APK:', current);
-  if (input !== null) {
-    const trimmed = input.trim();
-    if (trimmed) {
-      localStorage.setItem('laruta_apk_drive_url', trimmed);
-      alert('¡Enlace de APK actualizado con éxito!');
-    } else {
-      localStorage.removeItem('laruta_apk_drive_url');
-      alert('Enlace restablecido por defecto.');
-    }
-    updateMobileApkButtons();
-  }
-}
 

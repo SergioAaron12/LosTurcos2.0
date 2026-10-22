@@ -77,9 +77,6 @@
         </div>
       </div>
       <div class="m-app-actions">
-        <a href="#" id="m-btn-apk-header" target="_blank" class="m-icon-btn" title="Descargar APK para Teléfono" style="background: rgba(16,185,129,0.2); color: #10b981; border: 1px solid rgba(16,185,129,0.4); text-decoration: none; display: flex; align-items: center; justify-content: center;">
-          <i class="fa-brands fa-android" style="font-size: 15px;"></i>
-        </a>
         <div class="m-status-pill">
           <span class="pulse-dot"></span>
           <span>Activo</span>
@@ -90,23 +87,22 @@
       </div>
     </header>
 
-    <!-- Horizontal Stats Strip -->
+    <!-- Clean 3-Column Stats Grid (No cutting off, perfectly balanced) -->
     <div class="m-stats-strip">
       <div class="m-stat-pill">
-        <i class="fa-solid fa-users"></i>
-        <span>Clientes: <strong id="m-stat-total">773</strong></span>
-      </div>
-      <div class="m-stat-pill pill-email">
-        <i class="fa-regular fa-envelope"></i>
-        <span>Correos: <strong id="m-stat-email">719</strong></span>
+        <i class="fa-solid fa-users" style="color: #f4c542;"></i>
+        <span>Clientes</span>
+        <strong id="m-stat-total">773</strong>
       </div>
       <div class="m-stat-pill pill-wa">
-        <i class="fa-brands fa-whatsapp"></i>
-        <span>WhatsApp: <strong id="m-stat-wa">684</strong></span>
+        <i class="fa-brands fa-whatsapp" style="color: #25d366;"></i>
+        <span>WhatsApp</span>
+        <strong id="m-stat-wa">684</strong>
       </div>
       <div class="m-stat-pill pill-prods">
-        <i class="fa-solid fa-boxes-stacked"></i>
-        <span>Corega: <strong>4</strong></span>
+        <i class="fa-solid fa-boxes-stacked" style="color: #f59e0b;"></i>
+        <span>Corega</span>
+        <strong id="m-stat-prods">4</strong>
       </div>
     </div>
 
@@ -114,7 +110,7 @@
     <main class="m-container">
 
       <!-- ==================== TAB 1: CAMPAÑA CORREO ==================== -->
-      <section id="m-tab-campaign" class="m-tab-pane active">
+      <section id="m-tab-campaign" class="m-tab-pane">
         <!-- Products Horizontal Picker -->
         <div class="m-card">
           <div class="m-card-header">
@@ -219,30 +215,7 @@ Le presentamos nuestras ofertas mayoristas con entrega directa para {farmacia}:<
       </section>
 
       <!-- ==================== TAB 3: WHATSAPP ==================== -->
-      <section id="m-tab-whatsapp" class="m-tab-pane">
-        
-        <!-- APK Download Card for Phone -->
-        <div class="m-card" style="background: linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(244,197,66,0.08) 100%); border: 1.5px solid #10b981; margin-bottom: 12px;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <i class="fa-brands fa-android" style="font-size: 18px; color: #10b981;"></i>
-              <strong style="color: #fff; font-size: 13px;">App Oficial para Celular (APK)</strong>
-            </div>
-            <span style="font-size: 10px; background: #10b981; color: #fff; padding: 2px 8px; border-radius: 99px; font-weight: 700;">Google Drive</span>
-          </div>
-          <p style="font-size: 11px; color: #cbd5e1; margin-bottom: 10px; line-height: 1.4;">
-            Instala la aplicación en tu teléfono para abrir tus despachos de WhatsApp al instante sin depender del navegador.
-          </p>
-          <div style="display: flex; gap: 8px;">
-            <a href="#" id="m-btn-apk-tab" target="_blank" class="m-btn m-btn-green" style="flex: 1; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; font-size: 12px; font-weight: 800;">
-              <i class="fa-solid fa-download"></i> Descargar APK
-            </a>
-            <button type="button" class="m-btn m-btn-outline" onclick="promptMobileApkDriveUrl()" style="padding: 10px; font-size: 12px;" title="Configurar Enlace Google Drive">
-              <i class="fa-solid fa-link"></i>
-            </button>
-          </div>
-        </div>
-
+      <section id="m-tab-whatsapp" class="m-tab-pane active">
         <div class="m-card">
           <div class="m-card-header">
             <div class="m-card-title"><i class="fa-brands fa-whatsapp" style="color: #25d366;"></i> Campaña WhatsApp</div>
@@ -315,21 +288,21 @@ Tenemos stock inmediato de *Adhesivos Dentales Corega 70g* con precio mayorista:
 
     <!-- ==================== BOTTOM NAVIGATION BAR ==================== -->
     <nav class="m-bottom-nav">
-      <button class="m-nav-item active" data-target="m-tab-campaign">
-        <i class="fa-solid fa-paper-plane"></i>
-        <span>Campaña</span>
+      <button class="m-nav-item active" data-target="m-tab-whatsapp">
+        <i class="fa-brands fa-whatsapp"></i>
+        <span>WhatsApp</span>
       </button>
       <button class="m-nav-item" data-target="m-tab-contacts">
         <i class="fa-solid fa-users"></i>
         <span>Clientes</span>
       </button>
-      <button class="m-nav-item" data-target="m-tab-whatsapp">
-        <i class="fa-brands fa-whatsapp"></i>
-        <span>WhatsApp</span>
-      </button>
       <button class="m-nav-item" data-target="m-tab-products">
         <i class="fa-solid fa-boxes-stacked"></i>
         <span>Productos</span>
+      </button>
+      <button class="m-nav-item" data-target="m-tab-campaign">
+        <i class="fa-solid fa-paper-plane"></i>
+        <span>Correo</span>
       </button>
       <button class="m-nav-item" data-target="m-tab-settings">
         <i class="fa-solid fa-gear"></i>

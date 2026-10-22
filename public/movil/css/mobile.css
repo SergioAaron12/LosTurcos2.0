@@ -152,37 +152,63 @@ body {
   background: var(--dark-border);
 }
 
-/* ================= QUICK STATS STRIP ================= */
+/* ================= QUICK STATS GRID ================= */
 .m-stats-strip {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  padding: 10px 16px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+  padding: 10px 16px 6px;
 }
-.m-stats-strip::-webkit-scrollbar { display: none; }
 
 .m-stat-pill {
-  flex: 0 0 auto;
   background: var(--dark-surface);
   border: 1px solid var(--dark-border);
-  border-radius: var(--radius-full);
-  padding: 6px 12px;
-  font-size: 11px;
+  border-radius: var(--radius-md);
+  padding: 8px 4px;
   color: var(--text-muted);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  text-align: center;
+  gap: 2px;
+  transition: all 0.2s;
+}
+
+.m-stat-pill i {
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.m-stat-pill span {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .m-stat-pill strong {
+  font-size: 15px;
   color: #ffffff;
   font-weight: 800;
 }
 
-.m-stat-pill.pill-email { border-color: rgba(56, 189, 248, 0.4); background: rgba(2, 132, 199, 0.1); color: #38bdf8; }
-.m-stat-pill.pill-wa { border-color: rgba(37, 211, 102, 0.4); background: rgba(37, 211, 102, 0.1); color: #25d366; }
+.m-stat-pill.pill-wa {
+  border-color: rgba(37, 211, 102, 0.3);
+  background: rgba(37, 211, 102, 0.08);
+}
+.m-stat-pill.pill-wa strong {
+  color: #25d366;
+}
+
+.m-stat-pill.pill-prods {
+  border-color: rgba(244, 197, 66, 0.3);
+  background: rgba(244, 197, 66, 0.08);
+}
+.m-stat-pill.pill-prods strong {
+  color: #f4c542;
+}
 .m-stat-pill.pill-prods { border-color: rgba(244, 197, 66, 0.4); background: rgba(244, 197, 66, 0.1); color: var(--primary); }
 
 /* ================= TAB PANES ================= */
