@@ -593,6 +593,28 @@ function setupEventListeners() {
       }
     });
   });
+
+  // Inicializar enlace de APK en Ajustes si existe personalizado
+  const customDriveUrl = localStorage.getItem('laruta_apk_drive_url');
+  if (customDriveUrl) {
+    const btn = document.getElementById('m-settings-apk-btn');
+    if (btn) btn.href = customDriveUrl;
+  }
 }
+
+function promptMobileApkDriveUrl() {
+  const current = localStorage.getItem('laruta_apk_drive_url') || 'https://drive.google.com/file/d/133mJoUHWGUhyIpG4jm2th1lrYFxGWN00/view?usp=sharing';
+  const input = prompt('Enlace de Google Drive para la APK:', current);
+  if (input !== null) {
+    const trimmed = input.trim();
+    if (trimmed) {
+      localStorage.setItem('laruta_apk_drive_url', trimmed);
+      const btn = document.getElementById('m-settings-apk-btn');
+      if (btn) btn.href = trimmed;
+      alert('¡Enlace de Google Drive actualizado con éxito!');
+    }
+  }
+}
+
 
 
