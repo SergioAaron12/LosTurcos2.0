@@ -62,6 +62,17 @@ if (!fs.existsSync(androidDir)) {
   execSync('npx cap sync android', { cwd: LARUTA_DIR, stdio: 'inherit' });
 }
 
+// 4.1 Generar iconos nativos con el logo oficial
+try {
+  console.log('🎨 Generando iconos nativos de Android con el logo oficial...');
+  execSync('powershell -ExecutionPolicy Bypass -File scripts\\generate_android_icons.ps1', {
+    cwd: WORKSPACE_DIR,
+    stdio: 'inherit'
+  });
+} catch (e) {
+  console.warn('Advertencia al generar iconos:', e.message);
+}
+
 // 5. Configurar local.properties para Android SDK
 const localPropsPath = path.join(androidDir, 'local.properties');
 const sdkEscaped = SDK_PATH.replace(/\\/g, '\\\\');
