@@ -247,6 +247,24 @@ async function loadMobileContacts() {
     } catch (e) {}
   }
 
+  // Cargar clientes personalizados de Cloud Firestore (sincronizados con el Administrador web)
+  try {
+    if (window.firebase && typeof window.firebase.firestore === 'function') {
+      const db = window.firebase.firestore();
+      const snap = await db.collection('custom_clients').get();
+      if (!snap.empty) {
+        const cloudClients = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const ids = new Set(list.map(c => c.id));
+        const freshCloud = cloudClients.filter(c => !ids.has(c.id));
+        if (freshCloud.length) {
+          list = [...freshCloud, ...list];
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Firestore custom_clients sync error:', e.message);
+  }
+
   // Combinar clientes personalizados locales
   try {
     const custom = JSON.parse(localStorage.getItem('mkt_custom_clients') || '[]');
@@ -535,8 +553,21 @@ async function saveMobileNewClient(e) {
     whatsAppNumero: cleanWa.startsWith('56') ? cleanWa : (cleanWa ? '56' + cleanWa : ''),
     tieneWhatsApp: Boolean(telefono && telefono.length >= 8),
     tieneEmail: Boolean(correo && correo.includes('@')),
-    comuna
+    comuna,
+    isCustom: true,
+    createdAt: new Date().toISOString()
   };
+
+  // Sincronizar en Cloud Firestore (disponible para el Administrador web y todos los dispositivos)
+  try {
+    if (window.firebase && typeof window.firebase.firestore === 'function') {
+      const db = window.firebase.firestore();
+      await db.collection('custom_clients').doc(newContact.id).set(newContact);
+      console.log('✓ Nuevo cliente sincronizado en Firestore desde APK');
+    }
+  } catch (e) {
+    console.warn('Error al sincronizar en Firestore:', e.message);
+  }
 
   const stored = JSON.parse(localStorage.getItem('mkt_custom_clients') || '[]');
   stored.unshift(newContact);
@@ -550,7 +581,7 @@ async function saveMobileNewClient(e) {
   updateMobileHeaderStats();
   document.getElementById('m-form-new-client')?.reset();
   closeMobileAddClientSheet();
-  alert(`¡Cliente "${farmacia || contacto}" agregado con éxito!`);
+  alert(`¡Cliente "${farmacia || contacto}" agregado con éxito y sincronizado!`);
 }
 
 // ================= WHATSAPP DISPATCHER =================

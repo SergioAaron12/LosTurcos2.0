@@ -495,6 +495,20 @@ async function loadContacts() {
     return;
   }
 
+  // Sincronizar clientes personalizados desde Cloud Firestore
+  try {
+    if (window.firebase && typeof window.firebase.firestore === 'function') {
+      const db = window.firebase.firestore();
+      const snap = await db.collection('custom_clients').get();
+      if (!snap.empty) {
+        const cloudClients = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const existingIds = new Set(data.contacts.map(c => c.id));
+        const newCustom = cloudClients.filter(c => !existingIds.has(c.id));
+        data.contacts = [...newCustom, ...data.contacts];
+      }
+    }
+  } catch (e) {}
+
   // Combinar clientes personalizados agregados manualmente
   try {
     const localCustom = JSON.parse(localStorage.getItem('mkt_custom_clients') || '[]');
@@ -959,6 +973,17 @@ async function handleAddNewClient(e) {
     direccion: direccion,
     rut: ''
   };
+
+  // Guardar en Firestore para que se sincronice en la APK móvil y todos los dispositivos
+  try {
+    if (window.firebase && typeof window.firebase.firestore === 'function') {
+      const db = window.firebase.firestore();
+      await db.collection('custom_clients').doc(newContact.id).set(newContact);
+      console.log('✓ Cliente guardado en Firestore custom_clients desde Envíos');
+    }
+  } catch (err) {
+    console.warn('Error al guardar en Firestore:', err.message);
+  }
 
   // Guardar en localStorage para persistencia
   try {

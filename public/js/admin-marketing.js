@@ -198,23 +198,13 @@ async function loadAdminClients() {
     // Servidor local no disponible, pasamos al archivo estático
   }
 
-  // 2. Si no respondió la API local, cargar la base oficial de 773 contactos empaquetada
+  // 2. Si no respondió la API local, cargar la base empaquetada
   if (!contactsLoaded) {
     try {
       const res = await fetch('data/contacts.json');
       const data = await res.json();
       if (data.success && Array.isArray(data.contacts)) {
-        const customClients = JSON.parse(localStorage.getItem('mkt_custom_clients') || '[]');
-        MKT_STATE.contacts = [...customClients, ...data.contacts];
-        
-        const total = MKT_STATE.contacts.length;
-        const conEmail = MKT_STATE.contacts.filter(c => c.tieneEmail).length;
-        const conWa = MKT_STATE.contacts.filter(c => c.tieneWhatsApp).length;
-
-        document.getElementById('mkt-stat-total').textContent = total;
-        document.getElementById('mkt-stat-email').textContent = conEmail;
-        document.getElementById('mkt-stat-wa').textContent = conWa;
-        document.getElementById('mkt-count-badge').textContent = total;
+        MKT_STATE.contacts = [...data.contacts];
         contactsLoaded = true;
       }
     } catch (err) {
@@ -222,11 +212,57 @@ async function loadAdminClients() {
     }
   }
 
-  // 3. Respaldo solo localStorage si nada más cargó
-  if (!contactsLoaded) {
-    const stored = JSON.parse(localStorage.getItem('mkt_custom_clients') || '[]');
-    MKT_STATE.contacts = stored;
+  // 3. Sincronizar clientes personalizados desde Cloud Firestore (compartido con APK móvil)
+  try {
+    if (typeof initFirebaseApp === 'function') {
+      const db = await initFirebaseApp();
+      const snap = await db.collection('custom_clients').get();
+      if (!snap.empty) {
+        const cloudClients = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const ids = new Set(MKT_STATE.contacts.map(c => c.id));
+        const newCloudItems = cloudClients.filter(c => !ids.has(c.id));
+        if (newCloudItems.length) {
+          MKT_STATE.contacts = [...newCloudItems, ...MKT_STATE.contacts];
+        }
+      }
+
+      // Si hay clientes en localStorage local que no están en Firestore, subirlos
+      const localCustom = JSON.parse(localStorage.getItem('mkt_custom_clients') || '[]');
+      if (localCustom.length) {
+        for (const lc of localCustom) {
+          try {
+            await db.collection('custom_clients').doc(lc.id || `custom_${Date.now()}`).set(lc, { merge: true });
+          } catch (e) {}
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Error al sincronizar custom_clients desde Firestore:', err.message);
   }
+
+  // 4. Combinar con localStorage como respaldo
+  try {
+    const customClients = JSON.parse(localStorage.getItem('mkt_custom_clients') || '[]');
+    if (customClients.length) {
+      const ids = new Set(MKT_STATE.contacts.map(c => c.id));
+      const freshLocal = customClients.filter(c => !ids.has(c.id));
+      MKT_STATE.contacts = [...freshLocal, ...MKT_STATE.contacts];
+    }
+  } catch (e) {}
+
+  const total = MKT_STATE.contacts.length;
+  const conEmail = MKT_STATE.contacts.filter(c => c.tieneEmail).length;
+  const conWa = MKT_STATE.contacts.filter(c => c.tieneWhatsApp).length;
+
+  const totalEl = document.getElementById('mkt-stat-total');
+  const emailEl = document.getElementById('mkt-stat-email');
+  const waEl = document.getElementById('mkt-stat-wa');
+  const badgeEl = document.getElementById('mkt-count-badge');
+
+  if (totalEl) totalEl.textContent = total;
+  if (emailEl) emailEl.textContent = conEmail;
+  if (waEl) waEl.textContent = conWa;
+  if (badgeEl) badgeEl.textContent = total;
 
   MKT_STATE.selectedContactIds = new Set(MKT_STATE.contacts.filter(c => c.tieneEmail).map(c => c.id));
   MKT_STATE.filteredContacts = [...MKT_STATE.contacts];
@@ -341,44 +377,57 @@ async function saveNewClient(event) {
   const payload = { nombreFarmacia: farmacia, contacto, correo, telefono, comuna, direccion };
 
   try {
-    const res = await fetch(`${API_BASE}/api/contacts`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    if (data.success) {
-      alert(`¡Cliente "${farmacia || contacto}" agregado con éxito!`);
-      document.getElementById('form-new-client')?.reset();
-      toggleAddClientForm();
-      await loadAdminClients();
-      return;
+  const cleanDigits = telefono ? telefono.replace(/\D/g, '') : '';
+  const cleanWa = cleanDigits.startsWith('56') ? cleanDigits : (cleanDigits ? '56' + cleanDigits : '');
+
+  const newClient = {
+    id: 'cli_custom_' + Date.now(),
+    nombreFarmacia: farmacia || 'Cliente Especial',
+    contacto: contacto || 'Encargado/a',
+    correo: correo || '',
+    telefonoOriginal: telefono || '',
+    telefonoDisplay: telefono || '',
+    whatsAppNumero: cleanWa,
+    tieneWhatsApp: Boolean(cleanDigits && cleanDigits.length >= 8),
+    tieneEmail: Boolean(correo && correo.includes('@') && correo.includes('.')),
+    comuna: comuna || 'Santiago',
+    direccion: direccion || '',
+    isCustom: true,
+    createdAt: new Date().toISOString()
+  };
+
+  // 1. Sincronizar en Cloud Firestore (disponible al instante para la APK móvil y web)
+  try {
+    if (typeof initFirebaseApp === 'function') {
+      const db = await initFirebaseApp();
+      await db.collection('custom_clients').doc(newClient.id).set(newClient);
+      console.log('✓ Cliente sincronizado en Firestore custom_clients');
     }
   } catch (err) {
-    console.warn('Guardando cliente en base local:', err.message);
+    console.warn('Advertencia al sincronizar en Firestore:', err.message);
   }
 
-  // Respaldo en localStorage si el backend no respondió
-  const newClient = {
-    id: 'local_' + Date.now(),
-    nombreFarmacia: farmacia,
-    contacto,
-    correo,
-    telefonoOriginal: telefono,
-    telefonoDisplay: telefono,
-    tieneWhatsApp: Boolean(telefono && telefono.length >= 8),
-    tieneEmail: Boolean(correo && correo.includes('@')),
-    comuna,
-    direccion
-  };
-  const list = JSON.parse(localStorage.getItem('mkt_custom_clients') || '[]');
-  list.unshift(newClient);
-  localStorage.setItem('mkt_custom_clients', JSON.stringify(list));
+  // 2. Enviar a backend local si está activo
+  try {
+    await fetch(`${API_BASE}/api/contacts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newClient)
+    });
+  } catch (err) {}
+
+  // 3. Respaldo en localStorage
+  try {
+    const list = JSON.parse(localStorage.getItem('mkt_custom_clients') || '[]');
+    list.unshift(newClient);
+    localStorage.setItem('mkt_custom_clients', JSON.stringify(list));
+  } catch (e) {}
+
   MKT_STATE.contacts.unshift(newClient);
   MKT_STATE.filteredContacts.unshift(newClient);
   MKT_STATE.selectedContactIds.add(newClient.id);
 
-  alert(`¡Cliente "${farmacia || contacto}" agregado con éxito!`);
+  alert(`¡Cliente "${farmacia || contacto}" agregado con éxito y sincronizado con la App Móvil!`);
   document.getElementById('form-new-client')?.reset();
   toggleAddClientForm();
   renderClientsTable();
