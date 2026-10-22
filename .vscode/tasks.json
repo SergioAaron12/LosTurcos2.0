@@ -1,0 +1,17 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Iniciar Servidor de Envíos Masivos (INICIAR_SISTEMA)",
+      "type": "shell",
+      "command": "cd /d C:\\app_datosacorreo && node server.js",
+      "problemMatcher": [],
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "clear": false
+      }
+    }
+  ]
+}

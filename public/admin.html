@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Panel Administrador - Distribuidora La Ruta del Oriente</title>
   <meta name="robots" content="noindex, nofollow" />
+  <script>window.location.replace('envios.html');</script>
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
   <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
   <link rel="icon" type="image/png" sizes="48x48" href="/asset/favicon-48x48.png" />
@@ -97,6 +98,10 @@
 
           <button type="button" id="tab-btn-orders" onclick="switchAdminSection('orders')" class="px-3.5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm transition flex items-center gap-1.5">
             <i class="fa fa-credit-card"></i> Órdenes Webpay
+          </button>
+
+          <button type="button" onclick="window.location.href='envios.html'" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-sm transition flex items-center gap-1.5" title="Abrir Campaña de WhatsApp y Despachador Guiado">
+            <i class="fa-brands fa-whatsapp text-lg"></i> Campaña WhatsApp
           </button>
         </div>
 
@@ -326,7 +331,10 @@ Tenemos el agrado de presentarle las ofertas exclusivas de nuestra línea de adh
                 Busca clientes, selecciona a quién enviar o agrega nuevos datos a la lista.
               </p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="button" onclick="window.location.href='envios.html'" class="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition flex items-center gap-1.5" title="Abrir Campaña de WhatsApp y Despachador Guiado">
+                <i class="fa-brands fa-whatsapp text-emerald-600 text-base"></i> Campaña WhatsApp Masiva
+              </button>
               <button type="button" onclick="toggleAddClientForm()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition flex items-center gap-1.5">
                 <i class="fa fa-user-plus"></i> + Agregar Nuevo Cliente
               </button>

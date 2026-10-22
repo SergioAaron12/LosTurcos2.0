@@ -32,6 +32,67 @@ const state = {
   }
 };
 
+// ================= API BASE & HELPER =================
+// Servidor Node.js para envíos Titan SMTP (puerto 3000)
+const LOCAL_API_BASE = 'http://localhost:3000';
+
+function getApiUrl(endpoint) {
+  if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+    return endpoint;
+  }
+  // Si estamos navegando localmente en el puerto 3000
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return endpoint;
+  }
+  // Si estamos en distribuidoralarutadeloriente.cl, conectar al servidor local en puerto 3000
+  return `${LOCAL_API_BASE}${endpoint}`;
+}
+
+async function apiFetch(endpoint, options = {}) {
+  const url = getApiUrl(endpoint);
+  let res;
+  try {
+    res = await fetch(url, options);
+  } catch (err) {
+    if (!url.startsWith(LOCAL_API_BASE)) {
+      try {
+        res = await fetch(`${LOCAL_API_BASE}${endpoint}`, options);
+      } catch (err2) {
+        throw new Error(
+          'No se pudo conectar al servidor de envíos masivos (http://localhost:3000). ' +
+          'Asegúrate de tener ejecutándose "npm run envios" o INICIAR_SISTEMA.bat en tu computador.'
+        );
+      }
+    } else {
+      throw new Error(
+        'No se pudo conectar al servidor de envíos masivos (http://localhost:3000). ' +
+        'Asegúrate de tener ejecutándose "npm run envios" o INICIAR_SISTEMA.bat en tu computador.'
+      );
+    }
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const text = await res.text();
+    if (text.trim().startsWith('<')) {
+      // Firebase Hosting devolvió HTML (404/index.html) porque no tiene backend Node.js
+      if (!url.startsWith(LOCAL_API_BASE)) {
+        return apiFetch(`${LOCAL_API_BASE}${endpoint}`, options);
+      }
+      throw new Error(
+        'El servicio de envíos no respondió adecuadamente. Verifica que esté activo con "npm run envios".'
+      );
+    }
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      throw new Error(text || 'Respuesta inválida del servidor');
+    }
+  }
+
+  return await res.json();
+}
+
 // DOM Cache
 const DOM = {
   // Tabs
@@ -79,7 +140,18 @@ const DOM = {
   previewSubjectText: document.getElementById('preview-subject-text'),
   emailPreviewFrame: document.getElementById('email-preview-frame'),
   btnPreviewEmailModal: document.getElementById('btn-preview-email-modal'),
+  btnExpandPreview: document.getElementById('btn-expand-preview'),
   btnLaunchEmailCampaign: document.getElementById('btn-launch-email-campaign'),
+
+  // Email Test & Full Preview
+  testEmailRecipient: document.getElementById('test-email-recipient'),
+  btnSendTestEmail: document.getElementById('btn-send-test-email'),
+  testEmailStatusBox: document.getElementById('test-email-status-box'),
+  emailPreviewFullModal: document.getElementById('email-preview-full-modal'),
+  previewModalIframe: document.getElementById('preview-modal-iframe'),
+  btnClosePreviewModal: document.getElementById('btn-close-preview-modal'),
+  btnClosePreviewModalFooter: document.getElementById('btn-close-preview-modal-footer'),
+  btnPreviewToSend: document.getElementById('btn-preview-to-send'),
 
   // Email Modal Progress
   emailSendModal: document.getElementById('email-send-modal'),
@@ -94,7 +166,7 @@ const DOM = {
   btnStopCampaign: document.getElementById('btn-stop-campaign'),
   btnDoneCampaign: document.getElementById('btn-done-campaign'),
 
-  // Contacts View
+  // Contacts View & Add Client Form
   contactSearch: document.getElementById('contact-search'),
   filterChannel: document.getElementById('filter-channel'),
   filterComuna: document.getElementById('filter-comuna'),
@@ -108,6 +180,11 @@ const DOM = {
   btnReloadContacts: document.getElementById('btn-reload-contacts'),
   btnGoToEmailTab: document.getElementById('btn-go-to-email-tab'),
   selCountBadges: document.querySelectorAll('.sel-count-badge'),
+  btnToggleAddClient: document.getElementById('btn-toggle-add-client'),
+  addClientFormContainer: document.getElementById('add-client-form-container'),
+  btnCancelAddClient: document.getElementById('btn-cancel-add-client'),
+  btnCloseAddClientForm: document.getElementById('btn-close-add-client-form'),
+  formNewClientEnvios: document.getElementById('form-new-client-envios'),
 
   // WhatsApp Campaign
   waTargetCount: document.getElementById('wa-target-count'),
@@ -244,8 +321,7 @@ function initFirebaseClient() {
 async function triggerFirebaseSync() {
   try {
     showToast('Sincronizando los 4 productos con Firebase...', 'info');
-    const res = await fetch('/api/firebase/sync', { method: 'POST' });
-    const data = await res.json();
+    const data = await apiFetch('/api/firebase/sync', { method: 'POST' });
     if (data.success) {
       showToast(`¡Sincronizados ${data.count} productos desde Firebase!`, 'success');
       await loadProducts();
@@ -296,8 +372,7 @@ function setupTabs() {
 // ================= PRODUCTS CATALOG & PICKER =================
 async function loadProducts() {
   try {
-    const res = await fetch('/api/products');
-    const data = await res.json();
+    const data = await apiFetch('/api/products');
     if (data.success) {
       state.products = data.products;
       if (DOM.metricProducts) DOM.metricProducts.textContent = state.products.length;
@@ -392,35 +467,76 @@ function renderFullCatalog() {
 
 // ================= CONTACTS DATA =================
 async function loadContacts() {
+  let data = null;
+
   try {
-    const res = await fetch('/api/contacts');
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error);
-
-    state.contacts = data.contacts;
-    state.comunas = data.comunas;
-    state.stats = data.stats;
-
-    DOM.metricTotal.textContent = state.stats.total;
-    DOM.metricWa.textContent = state.stats.conWhatsApp;
-    DOM.metricEmail.textContent = state.stats.conEmail;
-
-    DOM.filterComuna.innerHTML = '<option value="all">Todas las Comunas</option>';
-    state.comunas.forEach(com => {
-      const opt = document.createElement('option');
-      opt.value = com;
-      opt.textContent = com;
-      DOM.filterComuna.appendChild(opt);
-    });
-
-    populatePreviewDropdowns();
-    state.selectedContactIds = new Set(state.contacts.map(c => c.id));
-
-    applyContactsFilter();
-    updateSelectionCounts();
+    const result = await apiFetch('/api/contacts');
+    if (result.success && Array.isArray(result.contacts)) {
+      data = result;
+    }
   } catch (err) {
-    showToast(`Error al cargar contactos: ${err.message}`, 'error');
+    // API local no disponible
   }
+
+  if (!data) {
+    try {
+      const res = await fetch('data/contacts.json');
+      const result = await res.json();
+      if (result.success && Array.isArray(result.contacts)) {
+        data = result;
+      }
+    } catch (err) {
+      console.warn('Fallback a data/contacts.json falló:', err.message);
+    }
+  }
+
+  if (!data) {
+    showToast('No se pudieron cargar los contactos del servidor ni del respaldo.', 'error');
+    return;
+  }
+
+  // Combinar clientes personalizados agregados manualmente
+  try {
+    const localCustom = JSON.parse(localStorage.getItem('mkt_custom_clients') || '[]');
+    if (Array.isArray(localCustom) && localCustom.length > 0) {
+      const existingIds = new Set(data.contacts.map(c => c.id));
+      const newCustom = localCustom.filter(c => !existingIds.has(c.id));
+      data.contacts = [...newCustom, ...data.contacts];
+      if (data.stats) {
+        data.stats.total = data.contacts.length;
+        data.stats.conEmail = data.contacts.filter(c => c.tieneEmail).length;
+        data.stats.conWhatsApp = data.contacts.filter(c => c.tieneWhatsApp).length;
+      }
+    }
+  } catch (e) {
+    console.warn('Error leyendo mkt_custom_clients:', e);
+  }
+
+  state.contacts = data.contacts;
+  state.comunas = data.comunas;
+  state.stats = data.stats || {
+    total: data.contacts.length,
+    conEmail: data.contacts.filter(c => c.tieneEmail).length,
+    conWhatsApp: data.contacts.filter(c => c.tieneWhatsApp).length
+  };
+
+  DOM.metricTotal.textContent = state.stats.total;
+  DOM.metricWa.textContent = state.stats.conWhatsApp;
+  DOM.metricEmail.textContent = state.stats.conEmail;
+
+  DOM.filterComuna.innerHTML = '<option value="all">Todas las Comunas</option>';
+  state.comunas.forEach(com => {
+    const opt = document.createElement('option');
+    opt.value = com;
+    opt.textContent = com;
+    DOM.filterComuna.appendChild(opt);
+  });
+
+  populatePreviewDropdowns();
+  state.selectedContactIds = new Set(state.contacts.map(c => c.id));
+
+  applyContactsFilter();
+  updateSelectionCounts();
 }
 
 function populatePreviewDropdowns() {
@@ -521,8 +637,8 @@ function updateSelectionCounts() {
   DOM.waTargetCount.textContent = waCount;
 }
 
-// ================= LIVE PREVIEWS =================
-async function updateLiveEmailPreview() {
+// ================= LIVE PREVIEWS & BUILDER =================
+function getEmailPreviewPayload() {
   const contactId = DOM.previewContactSelect.value;
   const subject = DOM.emailSubject.value || 'Ofertas Adhesivos Corega - Distribuidora La Ruta del Oriente';
   const title = DOM.emailTitle.value || subject;
@@ -533,36 +649,342 @@ async function updateLiveEmailPreview() {
   const senderPhone = DOM.emailSenderPhone.value || '+56 9 9786 2467';
 
   let bannerUrl = null;
-  if (DOM.cbUseAsBanner.checked && state.uploadedEmailFiles.length > 0) {
+  if (DOM.cbUseAsBanner && DOM.cbUseAsBanner.checked && state.uploadedEmailFiles.length > 0) {
     const firstImg = state.uploadedEmailFiles.find(f => f.isImage);
     if (firstImg) bannerUrl = firstImg.url;
   }
 
+  return {
+    contactId,
+    subject,
+    title,
+    body,
+    selectedProductIds: Array.from(state.selectedProductIds),
+    ctaText,
+    ctaUrl,
+    bannerUrl,
+    senderName,
+    senderPhone
+  };
+}
+
+function buildEmailHtmlPreview(data) {
+  const selectedProds = state.products.filter(p => state.selectedProductIds.has(p.id));
+  const contact = state.contacts.find(c => c.id === data.contactId) || {
+    nombreFarmacia: 'Farmacia Ejemplo',
+    contacto: 'Encargado/a de Adquisiciones',
+    comuna: 'Santiago',
+    direccion: 'Av. Libertador 1234'
+  };
+
+  const farmacia = contact.nombreFarmacia || 'su Farmacia';
+  const contacto = contact.contacto || 'Estimado/a';
+  const comuna = contact.comuna || 'Santiago';
+  const direccion = contact.direccion || '';
+
+  const processedSubject = (data.subject || '')
+    .replace(/{farmacia}/gi, farmacia)
+    .replace(/{contacto}/gi, contacto)
+    .replace(/{comuna}/gi, comuna);
+
+  const processedTitle = (data.title || '')
+    .replace(/{farmacia}/gi, farmacia)
+    .replace(/{contacto}/gi, contacto);
+
+  const processedBody = (data.body || '')
+    .replace(/{farmacia}/gi, farmacia)
+    .replace(/{contacto}/gi, contacto)
+    .replace(/{comuna}/gi, comuna)
+    .replace(/{direccion}/gi, direccion);
+
+  const bannerImgHtml = data.bannerUrl ? `
+    <div style="text-align: center; background: #000; padding: 0; line-height: 0;">
+      <img src="${data.bannerUrl}" alt="Banner Oferta" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
+    </div>
+  ` : '';
+
+  let prodsHtml = '';
+  if (selectedProds.length > 0) {
+    const prodCards = selectedProds.map(p => {
+      const priceFmt = (p.offerPrice || p.normalPrice || 0).toLocaleString('es-CL');
+      return `
+        <td width="50%" style="padding: 10px; vertical-align: top;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f4c542; border-radius: 12px; background-color: #0f1219; color: #ffffff; overflow: hidden;">
+            <tr>
+              <td style="background-color: #ffffff; padding: 14px; text-align: center;">
+                <img src="${p.imageUrl || p.image || '/asset/corega1.png'}" alt="${escapeHtml(p.name)}" style="max-height: 110px; max-width: 90%; object-fit: contain;" />
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 14px;">
+                <div style="color: #f4c542; font-weight: bold; font-size: 13px; min-height: 38px; line-height: 1.3;">${escapeHtml(p.name)}</div>
+                <div style="color: #f4c542; font-size: 20px; font-weight: 800; margin: 8px 0 4px;">$${priceFmt}</div>
+                <div style="color: #4ade80; font-size: 11px; margin-bottom: 12px;">🟢 Stock disponible (${p.stock || 100} un.)</div>
+                <a href="${p.url || 'https://distribuidoralarutadeloriente.cl'}" target="_blank" style="display: block; text-align: center; background: linear-gradient(135deg, #f4c542 0%, #eab308 100%); color: #0b0c10; font-weight: 800; font-size: 11px; padding: 8px 12px; border-radius: 6px; text-decoration: none;">
+                  Ver Producto &raquo;
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      `;
+    });
+
+    let rowsHtml = '';
+    for (let i = 0; i < prodCards.length; i += 2) {
+      const col1 = prodCards[i];
+      const col2 = prodCards[i + 1] || '<td width="50%"></td>';
+      rowsHtml += `<tr>${col1}${col2}</tr>`;
+    }
+
+    prodsHtml = `
+      <div style="margin: 24px 0 16px;">
+        <h3 style="color: #0b0c10; font-size: 16px; margin: 0 0 12px; border-bottom: 2px solid #f4c542; padding-bottom: 6px;">
+          🔥 Productos Destacados con Precio Mayorista:
+        </h3>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          ${rowsHtml}
+        </table>
+      </div>
+    `;
+  }
+
+  return `
+    <div style="font-family: Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f1f5f9; padding: 20px; margin: 0;">
+      <div style="max-width: 620px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
+        
+        <!-- Header Principal Negro y Dorado -->
+        <div style="background-color: #0b0c10; padding: 22px 20px; text-align: center; border-bottom: 3px solid #f4c542;">
+          <h1 style="color: #f4c542; font-size: 19px; margin: 0; font-weight: 800; letter-spacing: 0.5px;">
+            DISTRIBUIDORA LA RUTA DEL ORIENTE
+          </h1>
+          <p style="color: #94a3b8; font-size: 11px; margin: 4px 0 0; font-weight: 600;">
+            Venta Mayorista Directa para Farmacias &middot; distribuidoralarutadeloriente.cl
+          </p>
+        </div>
+
+        ${bannerImgHtml}
+
+        <!-- Contenido del Correo -->
+        <div style="padding: 24px 22px; color: #334155;">
+          ${processedTitle ? `<h2 style="color: #0b0c10; font-size: 17px; margin: 0 0 14px; font-weight: 800;">${processedTitle}</h2>` : ''}
+
+          <div style="font-size: 13px; line-height: 1.6; white-space: pre-wrap; margin-bottom: 20px; color: #1e293b;">${processedBody}</div>
+
+          ${prodsHtml}
+
+          <!-- Botón CTA -->
+          <div style="text-align: center; margin: 26px 0 18px;">
+            <a href="${data.ctaUrl || 'https://distribuidoralarutadeloriente.cl'}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #f4c542 0%, #eab308 100%); color: #0b0c10; font-weight: 800; font-size: 14px; padding: 13px 26px; border-radius: 10px; text-decoration: none; box-shadow: 0 4px 14px rgba(244, 197, 66, 0.4);">
+              ${data.ctaText || 'Visitar Catálogo Completo en la Web'} &raquo;
+            </a>
+          </div>
+
+          <!-- Contacto / Firma -->
+          <div style="margin-top: 26px; padding-top: 18px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.5;">
+            <strong style="color: #0b0c10;">${data.senderName || 'Distribuidora La Ruta del Oriente'}</strong><br/>
+            WhatsApp de Ventas: <strong style="color: #059669;">${data.senderPhone || '+56 9 9786 2467'}</strong><br/>
+            Santiago de Chile &middot; <a href="https://distribuidoralarutadeloriente.cl" target="_blank" style="color: #f4c542; text-decoration: underline;">distribuidoralarutadeloriente.cl</a>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #f8fafc; padding: 14px 20px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
+          Recibes este correo comercial porque tu farmacia está registrada en nuestro directorio mayorista.
+        </div>
+
+      </div>
+    </div>
+  `;
+}
+
+async function updateLiveEmailPreview() {
+  const payload = getEmailPreviewPayload();
+
   try {
-    const res = await fetch('/api/email/preview', {
+    const data = await apiFetch('/api/email/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (data.success && data.html) {
+      DOM.previewSubjectText.textContent = data.subject || payload.subject;
+      DOM.emailPreviewFrame.innerHTML = data.html;
+      return;
+    }
+  } catch (err) {
+    // Si la API remota o local está desconectada, renderizar de forma autónoma
+  }
+
+  const fallbackHtml = buildEmailHtmlPreview(payload);
+  DOM.previewSubjectText.textContent = payload.subject;
+  DOM.emailPreviewFrame.innerHTML = fallbackHtml;
+}
+
+// 1. Ver Vista Previa Completa en Modal
+function openEmailPreviewModal() {
+  const payload = getEmailPreviewPayload();
+  const modal = DOM.emailPreviewFullModal;
+  const iframe = DOM.previewModalIframe;
+  if (!modal || !iframe) return;
+
+  const html = DOM.emailPreviewFrame?.innerHTML || buildEmailHtmlPreview(payload);
+  iframe.srcdoc = html;
+  modal.classList.add('active');
+}
+
+function closeEmailPreviewModal() {
+  if (DOM.emailPreviewFullModal) {
+    DOM.emailPreviewFullModal.classList.remove('active');
+  }
+}
+
+// 2. Enviar Correo de Prueba a tu Bandeja
+async function sendTestEmail() {
+  const recipient = (DOM.testEmailRecipient?.value || '').trim();
+  const statusBox = DOM.testEmailStatusBox;
+  const btn = DOM.btnSendTestEmail;
+
+  if (!recipient || !recipient.includes('@')) {
+    showToast('Ingresa un correo válido para recibir la prueba.', 'error');
+    DOM.testEmailRecipient?.focus();
+    return;
+  }
+
+  const payload = getEmailPreviewPayload();
+
+  if (statusBox) {
+    statusBox.style.display = 'block';
+    statusBox.style.background = 'rgba(59, 130, 246, 0.15)';
+    statusBox.style.border = '1px solid rgba(59, 130, 246, 0.5)';
+    statusBox.style.color = '#93c5fd';
+    statusBox.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando correo de prueba con los productos a <strong>' + escapeHtml(recipient) + '</strong>...';
+  }
+  if (btn) btn.disabled = true;
+
+  try {
+    const data = await apiFetch('/api/email/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contactId,
-        subject,
-        title,
-        body,
-        selectedProductIds: Array.from(state.selectedProductIds),
-        ctaText,
-        ctaUrl,
-        bannerUrl,
-        senderName,
-        senderPhone
+        testRecipient: recipient,
+        subject: payload.subject,
+        title: payload.title,
+        body: payload.body,
+        selectedProductIds: payload.selectedProductIds,
+        bannerUrl: payload.bannerUrl,
+        ctaText: payload.ctaText,
+        ctaUrl: payload.ctaUrl,
+        senderName: payload.senderName,
+        senderPhone: payload.senderPhone
       })
     });
-    const data = await res.json();
+    if (btn) btn.disabled = false;
+
     if (data.success) {
-      DOM.previewSubjectText.textContent = data.subject;
-      DOM.emailPreviewFrame.innerHTML = data.html;
+      if (statusBox) {
+        statusBox.style.background = 'rgba(16, 185, 129, 0.15)';
+        statusBox.style.border = '1px solid rgba(16, 185, 129, 0.5)';
+        statusBox.style.color = '#6ee7b7';
+        statusBox.innerHTML = '✅ <strong>¡Prueba enviada con éxito!</strong> Revisa la bandeja de entrada o spam de <strong>' + escapeHtml(recipient) + '</strong>.';
+      }
+      showToast('¡Correo de prueba enviado con éxito a ' + recipient + '!', 'success');
+    } else {
+      throw new Error(data.error || 'Error al enviar');
     }
   } catch (err) {
-    console.error('Preview error:', err);
+    if (btn) btn.disabled = false;
+    if (statusBox) {
+      statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
+      statusBox.style.border = '1px solid rgba(239, 68, 68, 0.5)';
+      statusBox.style.color = '#fca5a5';
+      statusBox.innerHTML = '⚠️ <strong>No se pudo enviar la prueba:</strong> ' + escapeHtml(err.message) + '. <br><small>Verifica que el servicio de envíos esté activo en tu computador con <code>npm run envios</code>.</small>';
+    }
+    showToast('Error al enviar correo de prueba: ' + err.message, 'error');
   }
+}
+
+// 3. Agregar Nuevo Cliente / Usuario al Directorio
+function toggleAddClientForm(force) {
+  const container = DOM.addClientFormContainer;
+  if (!container) return;
+  const shouldOpen = typeof force === 'boolean' ? force : (container.style.display === 'none' || !container.style.display);
+  container.style.display = shouldOpen ? 'block' : 'none';
+  if (shouldOpen) {
+    document.getElementById('new-cli-farmacia')?.focus();
+  }
+}
+
+async function handleAddNewClient(e) {
+  e.preventDefault();
+  const farmacia = (document.getElementById('new-cli-farmacia')?.value || '').trim();
+  const contacto = (document.getElementById('new-cli-contacto')?.value || '').trim();
+  const correo = (document.getElementById('new-cli-correo')?.value || '').trim();
+  const telefono = (document.getElementById('new-cli-telefono')?.value || '').trim();
+  const comuna = (document.getElementById('new-cli-comuna')?.value || '').trim() || 'Santiago';
+  const direccion = (document.getElementById('new-cli-direccion')?.value || '').trim();
+
+  if (!farmacia && !contacto) {
+    showToast('Ingresa al menos el nombre de la farmacia o de la persona de contacto.', 'error');
+    return;
+  }
+
+  const payload = { nombreFarmacia: farmacia, contacto, correo, telefono, comuna, direccion };
+
+  try {
+    const data = await apiFetch('/api/contacts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (data && data.success) {
+      console.log('Cliente guardado en backend local');
+    }
+  } catch (err) {
+    // Si la API local no está corriendo, se respalda en localStorage
+  }
+
+  const cleanWa = telefono ? telefono.replace(/\D/g, '') : '';
+  const newContact = {
+    id: 'custom_' + Date.now(),
+    nombreFarmacia: farmacia || 'Farmacia',
+    contacto: contacto || 'Encargado de Farmacia',
+    correo: correo,
+    telefonoOriginal: telefono,
+    telefonoDisplay: telefono,
+    whatsAppNumero: cleanWa.startsWith('56') ? cleanWa : (cleanWa ? '56' + cleanWa : ''),
+    tieneWhatsApp: Boolean(telefono && telefono.length >= 8),
+    tieneEmail: Boolean(correo && correo.includes('@')),
+    comuna: comuna,
+    direccion: direccion,
+    rut: ''
+  };
+
+  // Guardar en localStorage para persistencia
+  try {
+    const list = JSON.parse(localStorage.getItem('mkt_custom_clients') || '[]');
+    list.unshift(newContact);
+    localStorage.setItem('mkt_custom_clients', JSON.stringify(list));
+  } catch (e) {}
+
+  state.contacts.unshift(newContact);
+  state.selectedContactIds.add(newContact.id);
+
+  state.stats.total = (state.stats.total || 0) + 1;
+  if (newContact.tieneEmail) state.stats.conEmail = (state.stats.conEmail || 0) + 1;
+  if (newContact.tieneWhatsApp) state.stats.conWhatsApp = (state.stats.conWhatsApp || 0) + 1;
+
+  DOM.metricTotal.textContent = state.stats.total;
+  DOM.metricEmail.textContent = state.stats.conEmail;
+  DOM.metricWa.textContent = state.stats.conWhatsApp;
+
+  applyContactsFilter();
+  updateSelectionCounts();
+  populatePreviewDropdowns();
+
+  DOM.formNewClientEnvios?.reset();
+  toggleAddClientForm(false);
+  showToast(`¡Cliente "${farmacia || contacto}" agregado con éxito al directorio!`, 'success');
 }
 
 function generateDefaultWhatsAppMessage() {
@@ -634,8 +1056,7 @@ async function handleFileUpload(files, type = 'email') {
 
   try {
     showToast('Subiendo archivo(s)...', 'info');
-    const res = await fetch('/api/upload', { method: 'POST', body: formData });
-    const data = await res.json();
+    const data = await apiFetch('/api/upload', { method: 'POST', body: formData });
     if (!data.success) throw new Error(data.error);
 
     if (type === 'email') {
@@ -720,7 +1141,7 @@ async function startEmailCampaign() {
   }
 
   try {
-    const res = await fetch('/api/email/send-batch', {
+    const data = await apiFetch('/api/email/send-batch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -738,20 +1159,18 @@ async function startEmailCampaign() {
       })
     });
 
-    const data = await res.json();
     if (!data.success) throw new Error(data.error);
 
     state.currentCampaignPollInterval = setInterval(pollCampaignStatus, 900);
   } catch (err) {
-    showToast(`Error: ${err.message}`, 'error');
+    showToast(`Error al enviar: ${err.message}`, 'error', 9000);
     DOM.sendLiveLogs.innerHTML += `<div class="log-item log-error">Error: ${escapeHtml(err.message)}</div>`;
   }
 }
 
 async function pollCampaignStatus() {
   try {
-    const res = await fetch('/api/email/status');
-    const data = await res.json();
+    const data = await apiFetch('/api/email/status');
 
     DOM.progCurrent.textContent = data.current;
     DOM.progTotal.textContent = data.total;
@@ -788,7 +1207,7 @@ async function pollCampaignStatus() {
 
 async function stopCampaign() {
   if (confirm('¿Deseas detener el envío de correos en este momento?')) {
-    await fetch('/api/email/stop', { method: 'POST' });
+    await apiFetch('/api/email/stop', { method: 'POST' });
     showToast('Deteniendo campaña...', 'info');
   }
 }
@@ -872,8 +1291,7 @@ async function markWaCurrentAsSentAndNext() {
 // ================= SMTP SETTINGS =================
 async function loadSmtpConfig() {
   try {
-    const res = await fetch('/api/config');
-    const cfg = await res.json();
+    const cfg = await apiFetch('/api/config');
     state.smtpConfig = cfg;
 
     DOM.smtpProvider.value = cfg.provider || 'gmail';
@@ -907,12 +1325,11 @@ async function saveSmtpConfig() {
   };
 
   try {
-    const res = await fetch('/api/config', {
+    const data = await apiFetch('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(cfg)
     });
-    const data = await res.json();
     if (!data.success) throw new Error(data.error);
 
     showToast('Configuración guardada correctamente', 'success');
@@ -934,12 +1351,11 @@ async function testSmtpConnection() {
   DOM.testResultBox.style.display = 'none';
 
   try {
-    const res = await fetch('/api/email/test', {
+    const data = await apiFetch('/api/email/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ testRecipient })
     });
-    const data = await res.json();
 
     DOM.testResultBox.style.display = 'block';
     if (data.success) {
@@ -964,8 +1380,7 @@ async function testSmtpConnection() {
 // ================= HISTORY =================
 async function loadHistory() {
   try {
-    const res = await fetch('/api/history');
-    const data = await res.json();
+    const data = await apiFetch('/api/history');
     if (!data.success) throw new Error(data.error);
 
     if (data.history.length === 0) {
@@ -1159,6 +1574,27 @@ function setupEventListeners() {
   DOM.btnCloseSendModal.addEventListener('click', () => DOM.emailSendModal.classList.remove('active'));
   DOM.btnDoneCampaign.addEventListener('click', () => DOM.emailSendModal.classList.remove('active'));
 
+  // Vista Previa Completa en Modal
+  if (DOM.btnPreviewEmailModal) DOM.btnPreviewEmailModal.addEventListener('click', openEmailPreviewModal);
+  if (DOM.btnExpandPreview) DOM.btnExpandPreview.addEventListener('click', openEmailPreviewModal);
+  if (DOM.btnClosePreviewModal) DOM.btnClosePreviewModal.addEventListener('click', closeEmailPreviewModal);
+  if (DOM.btnClosePreviewModalFooter) DOM.btnClosePreviewModalFooter.addEventListener('click', closeEmailPreviewModal);
+  if (DOM.btnPreviewToSend) {
+    DOM.btnPreviewToSend.addEventListener('click', () => {
+      closeEmailPreviewModal();
+      startEmailCampaign();
+    });
+  }
+
+  // Enviar Correo de Prueba
+  if (DOM.btnSendTestEmail) DOM.btnSendTestEmail.addEventListener('click', sendTestEmail);
+
+  // Agregar Nuevo Cliente al Directorio
+  if (DOM.btnToggleAddClient) DOM.btnToggleAddClient.addEventListener('click', () => toggleAddClientForm());
+  if (DOM.btnCancelAddClient) DOM.btnCancelAddClient.addEventListener('click', () => toggleAddClientForm(false));
+  if (DOM.btnCloseAddClientForm) DOM.btnCloseAddClientForm.addEventListener('click', () => toggleAddClientForm(false));
+  if (DOM.formNewClientEnvios) DOM.formNewClientEnvios.addEventListener('submit', handleAddNewClient);
+
   // WhatsApp
   DOM.waMessageText.addEventListener('input', debounce(updateLiveWaPreview, 200));
   DOM.waPreviewContactSelect.addEventListener('change', updateLiveWaPreview);
@@ -1229,4 +1665,252 @@ function debounce(func, wait) {
   };
 }
 
-document.addEventListener('DOMContentLoaded', init);
+// ================= SEGURIDAD Y CONTROL DE ACCESO (FIREBASE AUTH) =================
+const AUTHORIZED_ADMIN_EMAILS = ['distribuidorarutadeloriente@gmail.com', 'elsakitodewea@gmail.com'];
+
+function isAuthorizedAdminUser(user) {
+  const email = (user?.email || '').trim().toLowerCase();
+  return Boolean(
+    user && (
+      email.endsWith('@distribuidoralarutadeloriente.cl') ||
+      email === 'distribuidorarutadeloriente@gmail.com' ||
+      email === 'elsakitodewea@gmail.com'
+    )
+  );
+}
+
+function toggleAuthPassVisibility() {
+  const passInput = document.getElementById('auth-password');
+  const eyeIcon = document.getElementById('auth-eye-icon');
+  if (!passInput) return;
+  if (passInput.type === 'password') {
+    passInput.type = 'text';
+    if (eyeIcon) eyeIcon.className = 'fa-solid fa-eye-slash';
+  } else {
+    passInput.type = 'password';
+    if (eyeIcon) eyeIcon.className = 'fa-solid fa-eye';
+  }
+}
+
+async function handleAdminLogin(event) {
+  event.preventDefault();
+  const email = document.getElementById('auth-email')?.value.trim() || '';
+  const password = document.getElementById('auth-password')?.value || '';
+  const submitBtn = document.getElementById('btn-submit-auth');
+  const errorMsg = document.getElementById('auth-error-msg');
+  const noticeMsg = document.getElementById('auth-notice-msg');
+
+  if (errorMsg) errorMsg.style.display = 'none';
+  if (noticeMsg) noticeMsg.style.display = 'none';
+
+  if (!email || !password) {
+    if (errorMsg) {
+      errorMsg.textContent = 'Ingresa correo y contraseña.';
+      errorMsg.style.display = 'block';
+    }
+    return;
+  }
+
+  if (!isAuthorizedAdminUser({ email })) {
+    if (errorMsg) {
+      errorMsg.textContent = 'Acceso denegado: solo cuentas autorizadas pueden ingresar al modo administrador.';
+      errorMsg.style.display = 'block';
+    }
+    return;
+  }
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando credenciales...';
+  }
+
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(FIREBASE_CONFIG);
+    }
+    const creds = await firebase.auth().signInWithEmailAndPassword(email, password);
+    if (!isAuthorizedAdminUser(creds.user)) {
+      await firebase.auth().signOut();
+      throw new Error('La cuenta no corresponde a un administrador autorizado.');
+    }
+  } catch (err) {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Ingresar al Administrador';
+    }
+    if (errorMsg) {
+      let msg = 'No fue posible iniciar sesión: ' + (err.message || err.code);
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential' || err.code === 'auth/invalid-login-credentials') {
+        msg = 'Contraseña incorrecta para esa cuenta.';
+      } else if (err.code === 'auth/user-not-found') {
+        msg = 'No existe una cuenta registrada en Firebase Auth con ese correo.';
+      }
+      errorMsg.textContent = msg;
+      errorMsg.style.display = 'block';
+    }
+  }
+}
+
+async function sendAuthPasswordReset() {
+  const email = document.getElementById('auth-email')?.value.trim() || '';
+  const errorMsg = document.getElementById('auth-error-msg');
+  const noticeMsg = document.getElementById('auth-notice-msg');
+
+  if (errorMsg) errorMsg.style.display = 'none';
+  if (noticeMsg) noticeMsg.style.display = 'none';
+
+  if (!email) {
+    alert('Ingresa tu correo para enviarte el enlace de restablecimiento.');
+    return;
+  }
+
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(FIREBASE_CONFIG);
+    }
+    await firebase.auth().sendPasswordResetEmail(email);
+    if (noticeMsg) {
+      noticeMsg.textContent = 'Se envió un correo a ' + email + ' con el enlace para restablecer tu contraseña. Revisa tu bandeja de entrada o spam.';
+      noticeMsg.style.display = 'block';
+    }
+  } catch (err) {
+    if (errorMsg) {
+      errorMsg.textContent = 'Error al enviar recuperación: ' + err.message;
+      errorMsg.style.display = 'block';
+    }
+  }
+}
+
+async function handleAdminLogout() {
+  if (confirm('¿Deseas cerrar la sesión de administrador?')) {
+    try {
+      if (firebase.auth) {
+        await firebase.auth().signOut();
+      }
+    } catch (e) {}
+    sessionStorage.removeItem('adminAuthenticated');
+    window.location.reload();
+  }
+}
+
+let appInitialized = false;
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (!firebase.apps.length) {
+    firebase.initializeApp(FIREBASE_CONFIG);
+  }
+
+  firebase.auth().onAuthStateChanged(async user => {
+    const barrier = document.getElementById('admin-auth-barrier');
+    const appRoot = document.getElementById('admin-app-root');
+    const emailDisplay = document.getElementById('admin-current-user-email');
+
+    if (user && isAuthorizedAdminUser(user)) {
+      sessionStorage.setItem('adminAuthenticated', 'true');
+      if (barrier) barrier.style.display = 'none';
+      if (appRoot) appRoot.style.display = 'block';
+      if (emailDisplay) emailDisplay.textContent = user.email;
+      if (DOM.testEmailRecipient && user.email) {
+        DOM.testEmailRecipient.value = user.email;
+      }
+
+      if (!appInitialized) {
+        appInitialized = true;
+        await init();
+      }
+    } else {
+      sessionStorage.removeItem('adminAuthenticated');
+      if (appRoot) appRoot.style.display = 'none';
+      if (barrier) barrier.style.display = 'flex';
+      state.contacts = [];
+      state.filteredContacts = [];
+    }
+  });
+
+  initApkDownloadSystem();
+});
+
+// ================= APK DOWNLOAD MODAL & DRIVE SYSTEM =================
+const DEFAULT_APK_DRIVE_URL = 'https://drive.google.com/file/d/133mJoUHWGUhyIpG4jm2th1lrYFxGWN00/view?usp=sharing';
+
+function getApkDriveUrl() {
+  return localStorage.getItem('laruta_apk_drive_url') || DEFAULT_APK_DRIVE_URL;
+}
+
+function resolveDriveDownloadUrl(rawUrl) {
+  if (!rawUrl) return DEFAULT_APK_DRIVE_URL;
+  const match = rawUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || rawUrl.match(/id=([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) {
+    return `https://drive.google.com/uc?export=download&id=${match[1]}`;
+  }
+  return rawUrl;
+}
+
+function initApkDownloadSystem() {
+  updateApkModalUi();
+}
+
+function updateApkModalUi() {
+  const currentUrl = getApkDriveUrl();
+  const downloadBtn = document.getElementById('btn-apk-drive-download');
+  const qrImg = document.getElementById('apk-qr-image');
+  const inputLink = document.getElementById('input-apk-drive-link');
+
+  const downloadUrl = resolveDriveDownloadUrl(currentUrl);
+
+  if (downloadBtn) {
+    downloadBtn.href = downloadUrl;
+  }
+  if (inputLink) {
+    inputLink.value = currentUrl;
+  }
+  if (qrImg) {
+    const qrData = encodeURIComponent(downloadUrl);
+    qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${qrData}`;
+  }
+}
+
+function openApkDownloadModal() {
+  updateApkModalUi();
+  const modal = document.getElementById('apk-download-modal');
+  if (modal) {
+    modal.classList.add('active');
+  }
+}
+
+function closeApkDownloadModal() {
+  const modal = document.getElementById('apk-download-modal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+}
+
+function saveCustomApkDriveUrl() {
+  const input = document.getElementById('input-apk-drive-link');
+  const feedback = document.getElementById('apk-save-feedback');
+  if (!input) return;
+
+  const val = input.value.trim();
+  if (!val) {
+    localStorage.removeItem('laruta_apk_drive_url');
+    updateApkModalUi();
+    if (feedback) {
+      feedback.style.display = 'block';
+      feedback.style.color = '#cbd5e1';
+      feedback.textContent = 'Enlace restablecido por defecto.';
+      setTimeout(() => { feedback.style.display = 'none'; }, 2500);
+    }
+    return;
+  }
+
+  localStorage.setItem('laruta_apk_drive_url', val);
+  updateApkModalUi();
+
+  if (feedback) {
+    feedback.style.display = 'block';
+    feedback.style.color = '#4ade80';
+    feedback.textContent = '✓ ¡Enlace de Google Drive guardado con éxito!';
+    setTimeout(() => { feedback.style.display = 'none'; }, 3000);
+  }
+  showToast('Enlace de APK en Google Drive actualizado', 'success');
+}

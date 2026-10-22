@@ -1,0 +1,22 @@
+{
+  "name": "La Ruta del Oriente - Modo Móvil",
+  "short_name": "Ruta Oriente",
+  "description": "Panel Administrador Móvil para Envíos Masivos de Correo y WhatsApp",
+  "start_url": "index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0c10",
+  "theme_color": "#0b0c10",
+  "icons": [
+    {
+      "src": "/asset/favicon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "/asset/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

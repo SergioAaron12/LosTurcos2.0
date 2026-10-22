@@ -1,5 +1,9 @@
 {
   "scripts": {
+    "envios": "cd /d C:\\app_datosacorreo && node server.js",
+    "iniciar-sistema": "cd /d C:\\app_datosacorreo && node server.js",
+    "actualizar-contactos": "node scripts/actualizar_contactos.js",
+    "compilar-apk": "node scripts/build_apk.js",
     "serve": "firebase emulators:start --only hosting"
   },
   "dependencies": {

@@ -4,7 +4,8 @@ service cloud.firestore {
     function isAuthorizedAdmin() {
       return request.auth != null
         && (request.auth.token.email.matches('.*@distribuidoralarutadeloriente\\.cl$')
-            || request.auth.token.email == 'distribuidorarutadeloriente@gmail.com');
+            || request.auth.token.email == 'distribuidorarutadeloriente@gmail.com'
+            || request.auth.token.email == 'elsakitodewea@gmail.com');
     }
 
     match /products/{productId} {

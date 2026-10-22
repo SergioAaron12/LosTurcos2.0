@@ -180,19 +180,50 @@ function selectAllCorega(shouldSelect) {
 
 // 4. Cargar Clientes y Farmacias
 async function loadAdminClients() {
+  let contactsLoaded = false;
+
+  // 1. Intentar servidor local si está corriendo
   try {
     const res = await fetch(`${API_BASE}/api/contacts`);
     const data = await res.json();
-    if (data.success && data.contacts) {
+    if (data.success && Array.isArray(data.contacts) && data.contacts.length > 0) {
       MKT_STATE.contacts = data.contacts;
       document.getElementById('mkt-stat-total').textContent = data.stats.total;
       document.getElementById('mkt-stat-email').textContent = data.stats.conEmail;
       document.getElementById('mkt-stat-wa').textContent = data.stats.conWhatsApp;
       document.getElementById('mkt-count-badge').textContent = data.stats.total;
+      contactsLoaded = true;
     }
   } catch (err) {
-    console.warn('Cargando clientes de respaldo local...');
-    // Cargar clientes guardados en localStorage si el backend local no está corriendo
+    // Servidor local no disponible, pasamos al archivo estático
+  }
+
+  // 2. Si no respondió la API local, cargar la base oficial de 773 contactos empaquetada
+  if (!contactsLoaded) {
+    try {
+      const res = await fetch('data/contacts.json');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.contacts)) {
+        const customClients = JSON.parse(localStorage.getItem('mkt_custom_clients') || '[]');
+        MKT_STATE.contacts = [...customClients, ...data.contacts];
+        
+        const total = MKT_STATE.contacts.length;
+        const conEmail = MKT_STATE.contacts.filter(c => c.tieneEmail).length;
+        const conWa = MKT_STATE.contacts.filter(c => c.tieneWhatsApp).length;
+
+        document.getElementById('mkt-stat-total').textContent = total;
+        document.getElementById('mkt-stat-email').textContent = conEmail;
+        document.getElementById('mkt-stat-wa').textContent = conWa;
+        document.getElementById('mkt-count-badge').textContent = total;
+        contactsLoaded = true;
+      }
+    } catch (err) {
+      console.warn('No se pudo cargar data/contacts.json:', err.message);
+    }
+  }
+
+  // 3. Respaldo solo localStorage si nada más cargó
+  if (!contactsLoaded) {
     const stored = JSON.parse(localStorage.getItem('mkt_custom_clients') || '[]');
     MKT_STATE.contacts = stored;
   }
@@ -218,7 +249,7 @@ function renderClientsTable() {
       ? `<span class="text-blue-700 font-semibold">${c.correo}</span>` 
       : `<span class="text-gray-400 italic">Sin correo</span>`;
     const waBadge = c.tieneWhatsApp 
-      ? `<span class="text-emerald-700 font-semibold">${c.telefonoDisplay || c.whatsAppNumero}</span>` 
+      ? `<a href="https://web.whatsapp.com/send?phone=${c.whatsAppNumero}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-emerald-700 hover:text-emerald-900 font-semibold hover:underline" title="Abrir chat en WhatsApp"><i class="fa-brands fa-whatsapp text-emerald-600 text-sm"></i> ${c.telefonoDisplay || c.whatsAppNumero}</a>` 
       : `<span class="text-gray-400">${c.telefonoOriginal || 'Sin teléfono'}</span>`;
 
     return `
@@ -630,10 +661,14 @@ async function loadSmtpConfigInAdmin() {
     } else {
       if (badge) {
         badge.className = "text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300";
-        badge.innerHTML = "⚠️ Ingresa tu clave de 16 letras";
+        badge.innerHTML = "⚠️ Ingresa tu clave";
       }
     }
   } catch (err) {
+    const localUser = localStorage.getItem('mkt_smtp_user');
+    if (localUser && userInput && !userInput.value) {
+      userInput.value = localUser;
+    }
     if (badge) {
       badge.className = "text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700";
       badge.innerHTML = "Servidor local";
@@ -651,16 +686,18 @@ async function saveSmtpConfigFromAdmin() {
   const pass = passInput?.value.trim() || '';
 
   if (!user) {
-    alert('Ingresa tu correo de Gmail.');
+    alert('Ingresa tu correo emisor.');
     userInput?.focus();
     return false;
   }
 
   if (!pass && !passInput?.placeholder.includes('Guardada')) {
-    alert('Ingresa la contraseña de aplicación de 16 letras de Google.');
+    alert('Ingresa la contraseña de la cuenta o contraseña de aplicación.');
     passInput?.focus();
     return false;
   }
+
+  localStorage.setItem('mkt_smtp_user', user);
 
   try {
     const res = await fetch(`${API_BASE}/api/config`, {
@@ -681,15 +718,15 @@ async function saveSmtpConfigFromAdmin() {
     if (data.success) {
       if (badge) {
         badge.className = "text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300";
-        badge.innerHTML = "🟢 Gmail Conectado";
+        badge.innerHTML = (document.getElementById('smtp-provider-select')?.value === 'gmail') ? "🟢 Gmail Conectado" : "🟢 Correo Empresarial Conectado";
       }
       if (passInput) passInput.placeholder = "•••••••••••••••• (Guardada)";
       if (passInput) passInput.value = "";
-      alert('¡Cuenta de Gmail configurada y guardada con éxito!');
+      alert('¡Configuración de correo emisor guardada con éxito!');
       return true;
     }
   } catch (err) {
-    alert('Error al guardar configuración: ' + err.message + '. Asegúrate de tener INICIAR_SISTEMA.bat ejecutándose.');
+    alert('Error al guardar configuración: ' + err.message + '.\n\nPara guardar y enviar correos, el servidor local debe estar abierto ejecutando INICIAR_SISTEMA.bat ubicado en C:\\app_datosacorreo.');
     return false;
   }
   return true;

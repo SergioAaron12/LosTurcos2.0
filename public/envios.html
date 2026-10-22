@@ -12,20 +12,216 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="css/envios.css">
 
-  <!-- Firebase Web SDK Compat for Real-Time Sync with distribuidoralarutadeloriente -->
+  <!-- Firebase Web SDK Compat for Real-Time Sync & Secure Auth with distribuidoralarutadeloriente -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <style>
+    /* Estilos de Seguridad y Barrera de Acceso */
+    .auth-barrier-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: radial-gradient(circle at 50% 20%, #1e2433 0%, #0b0c10 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      padding: 20px;
+    }
+    .auth-card {
+      background: #11141d;
+      border: 1.5px solid rgba(244, 197, 66, 0.4);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 30px rgba(244, 197, 66, 0.15);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 440px;
+      padding: 36px 30px;
+      color: #ffffff;
+      text-align: center;
+    }
+    .auth-logo-badge img {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 2px solid #f4c542;
+      background: #000;
+      padding: 4px;
+      margin: 0 auto 14px auto;
+      box-shadow: 0 4px 16px rgba(244, 197, 66, 0.3);
+    }
+    .auth-card h2 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #f4c542;
+      margin-bottom: 4px;
+      letter-spacing: -0.5px;
+    }
+    .auth-card p.subtitle {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 24px;
+    }
+    .auth-field {
+      text-align: left;
+      margin-bottom: 16px;
+    }
+    .auth-field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+    .auth-field input {
+      width: 100%;
+      padding: 12px 14px;
+      background: #1e2330;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      color: #ffffff;
+      font-size: 13px;
+      outline: none;
+      transition: all 0.2s;
+    }
+    .auth-field input:focus {
+      border-color: #f4c542;
+      box-shadow: 0 0 0 3px rgba(244, 197, 66, 0.2);
+    }
+    .auth-password-wrapper {
+      position: relative;
+    }
+    .btn-toggle-eye {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .auth-alert {
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      margin-bottom: 16px;
+      text-align: left;
+    }
+    .auth-alert.error {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: #fca5a5;
+    }
+    .auth-alert.success {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      color: #6ee7b7;
+    }
+    .btn-auth-submit {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, #f4c542 0%, #eab308 100%);
+      color: #0b0c10;
+      border: none;
+      border-radius: 10px;
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(244, 197, 66, 0.35);
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin-top: 6px;
+    }
+    .btn-auth-submit:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(244, 197, 66, 0.45);
+    }
+    .auth-footer-links {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid #1e293b;
+      font-size: 11px;
+    }
+    .auth-link {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      text-decoration: underline;
+      transition: color 0.2s;
+    }
+    .auth-link:hover {
+      color: #f4c542;
+    }
+    .auth-link.return-store {
+      color: #e2e8f0;
+      text-decoration: none;
+    }
+  </style>
 </head>
 <body>
-<div style="background: #1e2430; padding: 8px 24px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #cbd5e1; border-bottom: 1px solid #334155;">
-  <div>
-    <strong style="color: #f4c542;">Distribuidora La Ruta del Oriente</strong> &middot; Módulo de Envíos Masivos
+
+  <!-- ==================== MURO DE SEGURIDAD (ACCESO ADMINISTRADOR) ==================== -->
+  <div id="admin-auth-barrier" class="auth-barrier-overlay">
+    <div class="auth-card">
+      <div class="auth-logo-badge">
+        <img src="/asset/logo-icon.png" alt="Logo" onerror="this.src='/asset/Logo_ruta.svg'">
+      </div>
+      <h2>Modo Administrador Protegido</h2>
+      <p class="subtitle">Distribuidora La Ruta del Oriente &middot; Acceso Restringido</p>
+
+      <form id="admin-auth-form" onsubmit="handleAdminLogin(event)">
+        <div class="auth-field">
+          <label for="auth-email"><i class="fa-solid fa-envelope"></i> Correo de Administrador</label>
+          <input type="email" id="auth-email" required value="distribuidorarutadeloriente@gmail.com" placeholder="ej: contacto@distribuidoralarutadeloriente.cl">
+        </div>
+
+        <div class="auth-field">
+          <label for="auth-password"><i class="fa-solid fa-lock"></i> Contraseña de Firebase Auth</label>
+          <div class="auth-password-wrapper">
+            <input type="password" id="auth-password" required placeholder="Contraseña de administrador">
+            <button type="button" class="btn-toggle-eye" onclick="toggleAuthPassVisibility()"><i class="fa-solid fa-eye" id="auth-eye-icon"></i></button>
+          </div>
+        </div>
+
+        <div id="auth-error-msg" class="auth-alert error" style="display: none;"></div>
+        <div id="auth-notice-msg" class="auth-alert success" style="display: none;"></div>
+
+        <button type="submit" id="btn-submit-auth" class="btn-auth-submit">
+          <i class="fa-solid fa-shield-halved"></i> Ingresar al Administrador
+        </button>
+
+        <div class="auth-footer-links">
+          <button type="button" onclick="sendAuthPasswordReset()" class="auth-link">¿Olvidaste tu contraseña?</button>
+          <a href="/" class="auth-link return-store"><i class="fa-solid fa-arrow-left"></i> Volver a la Tienda</a>
+        </div>
+      </form>
+    </div>
   </div>
-  <div style="display: flex; gap: 14px;">
-    <a href="/admin.html" style="color: #f4c542; text-decoration: none; font-weight: 700;">&laquo; Volver al Panel Admin</a>
-    <a href="/" style="color: #ffffff; text-decoration: none;">Ir a la Tienda</a>
-  </div>
-</div>
+
+  <!-- ==================== CONTENIDO PRIVADO (SOLO ADMINISTRADOR AUTENTICADO) ==================== -->
+  <div id="admin-app-root" style="display: none; width: 100%;">
+    <div style="background: #0f1219; padding: 10px 24px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #cbd5e1; border-bottom: 1.5px solid rgba(244, 197, 66, 0.35);">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <strong style="color: #f4c542;"><i class="fa-solid fa-shield-halved"></i> Panel Administrador</strong> &middot;
+        <span style="color: #94a3b8; font-size: 12px;">Sesión activa: <strong id="admin-current-user-email" style="color: #ffffff;">distribuidorarutadeloriente@gmail.com</strong></span>
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <button type="button" onclick="openApkDownloadModal()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; border: none; font-size: 11px; font-weight: 800; padding: 5px 12px; border-radius: 6px; display: flex; align-items: center; gap: 6px; cursor: pointer; box-shadow: 0 2px 8px rgba(16,185,129,0.35);">
+          <i class="fa-brands fa-android" style="font-size: 14px;"></i> Descargar APK Celular
+        </button>
+        <a href="/movil/" style="background: rgba(244, 197, 66, 0.15); border: 1px solid #f4c542; color: #f4c542; text-decoration: none; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px; display: flex; align-items: center; gap: 5px;">
+          <i class="fa-solid fa-mobile-screen-button"></i> Modo Móvil
+        </a>
+        <a href="/" style="color: #cbd5e1; text-decoration: none; font-size: 12px;"><i class="fa-solid fa-store"></i> Ver Tienda</a>
+        <button onclick="handleAdminLogout()" style="background: #ef4444; hover: background: #dc2626; color: white; border: none; padding: 5px 12px; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+          <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
+        </button>
+      </div>
+    </div>
 
   <!-- Top Navigation Header -->
   <header class="app-header">
@@ -210,6 +406,28 @@ A continuación le detallamos los productos destacados con precio especial de di
             </div>
           </div>
 
+          <!-- 2.5 ENVIAR CORREO DE PRUEBA A TU BANDEJA -->
+          <div class="card form-card border-gold" style="background: linear-gradient(180deg, #131722 0%, #0b0c10 100%);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <h3 style="color: #f4c542; margin: 0; font-size: 15px;">
+                <i class="fa-solid fa-paper-plane text-gold"></i> Enviar Correo de Prueba a tu Bandeja
+              </h3>
+              <span class="badge" style="background: rgba(244, 197, 66, 0.15); color: #f4c542; border: 1px solid rgba(244, 197, 66, 0.4); font-size: 11px;">
+                Recomendado antes de enviar masivo
+              </span>
+            </div>
+            <p class="subtitle" style="margin-bottom: 12px;">
+              Te enviaremos el correo real con las fotos de los productos de Firebase, precios y botones para que lo revises en tu computador o celular:
+            </p>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+              <input type="email" id="test-email-recipient" class="form-control" style="flex: 1; min-width: 260px;" placeholder="Tu correo personal (ej: tuemail@gmail.com)" value="distribuidorarutadeloriente@gmail.com">
+              <button type="button" class="btn btn-gold" id="btn-send-test-email" style="white-space: nowrap;">
+                <i class="fa-solid fa-paper-plane"></i> Enviar Prueba Ahora
+              </button>
+            </div>
+            <div id="test-email-status-box" style="display: none; margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;"></div>
+          </div>
+
           <!-- Attachments & Extra Photos Card -->
           <div class="card form-card">
             <h3><i class="fa-solid fa-paperclip"></i> Banner Publicitario o Archivos Adjuntos (Opcional)</h3>
@@ -242,9 +460,14 @@ A continuación le detallamos los productos destacados con precio especial de di
               <div class="preview-title">
                 <i class="fa-solid fa-eye text-gold"></i> Previsualización en Vivo
               </div>
-              <div class="preview-contact-picker">
-                <span>Cliente:</span>
-                <select id="preview-contact-select" class="custom-select select-sm"></select>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <button type="button" class="btn btn-sm btn-ghost" id="btn-expand-preview" title="Ver en pantalla completa">
+                  <i class="fa-solid fa-maximize"></i> Pantalla Completa
+                </button>
+                <div class="preview-contact-picker">
+                  <span>Cliente:</span>
+                  <select id="preview-contact-select" class="custom-select select-sm"></select>
+                </div>
               </div>
             </div>
             <div class="email-preview-subject-bar">
@@ -269,8 +492,8 @@ A continuación le detallamos los productos destacados con precio especial de di
           <button class="btn btn-outline" id="btn-sync-firebase-now">
             <i class="fa-solid fa-arrows-rotate"></i> Sincronizar con Firebase Ahora
           </button>
-          <a href="https://distribuidoralarutadeloriente.cl/admin.html" target="_blank" class="btn btn-primary">
-            <i class="fa-solid fa-lock"></i> Ir al Admin de la Web
+          <a href="index.html" class="btn btn-primary">
+            <i class="fa-solid fa-store"></i> Ver Tienda
           </a>
           <button class="btn btn-gold" id="btn-add-product-page">
             <i class="fa-solid fa-plus"></i> + Agregar Producto Local
@@ -324,6 +547,9 @@ A continuación le detallamos los productos destacados con precio especial de di
           <p>Filtra y selecciona los destinatarios de tu archivo Excel.</p>
         </div>
         <div class="view-actions">
+          <button class="btn btn-primary" id="btn-toggle-add-client" style="background: #10b981; border-color: #059669; color: #fff;">
+            <i class="fa-solid fa-user-plus"></i> + Agregar Nuevo Cliente
+          </button>
           <button class="btn btn-outline" id="btn-reload-contacts">
             <i class="fa-solid fa-rotate-right"></i> Recargar Excel
           </button>
@@ -331,6 +557,53 @@ A continuación le detallamos los productos destacados con precio especial de di
             <i class="fa-solid fa-envelope"></i> Redactar Oferta (<span class="sel-count-badge">0</span>)
           </button>
         </div>
+      </div>
+
+      <!-- FORMULARIO: AGREGAR NUEVO CLIENTE / USUARIO -->
+      <div class="card form-card mb-4" id="add-client-form-container" style="display: none; border: 2px solid #10b981; background: #0f172a;">
+        <div class="card-header-flex" style="border-bottom: 1px solid #1e293b; padding-bottom: 12px; margin-bottom: 16px;">
+          <div>
+            <h3 style="color: #34d399; font-size: 16px; margin: 0;">
+              <i class="fa-solid fa-user-plus"></i> Agregar Nuevo Cliente o Farmacia al Directorio
+            </h3>
+            <p style="font-size: 12px; color: #94a3b8; margin: 4px 0 0;">Se guardará inmediatamente para que puedas enviarle ofertas por Correo y WhatsApp.</p>
+          </div>
+          <button type="button" class="btn btn-sm btn-ghost" id="btn-cancel-add-client">✕ Cancelar</button>
+        </div>
+        <form id="form-new-client-envios">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 16px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="new-cli-farmacia" style="color: #cbd5e1; font-size: 12px; font-weight: 700;">Farmacia / Razón Social <span style="color: #ef4444;">*</span></label>
+              <input type="text" id="new-cli-farmacia" class="form-control" placeholder="Ej: Farmacia San José" required>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="new-cli-contacto" style="color: #cbd5e1; font-size: 12px; font-weight: 700;">Persona de Contacto</label>
+              <input type="text" id="new-cli-contacto" class="form-control" placeholder="Ej: Juan Pérez">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="new-cli-correo" style="color: #cbd5e1; font-size: 12px; font-weight: 700;">Correo Electrónico <span style="color: #ef4444;">*</span></label>
+              <input type="email" id="new-cli-correo" class="form-control" placeholder="contacto@farmacia.cl" required>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="new-cli-telefono" style="color: #cbd5e1; font-size: 12px; font-weight: 700;">WhatsApp / Teléfono Móvil</label>
+              <input type="text" id="new-cli-telefono" class="form-control" placeholder="+56 9 8765 4321">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="new-cli-comuna" style="color: #cbd5e1; font-size: 12px; font-weight: 700;">Comuna</label>
+              <input type="text" id="new-cli-comuna" class="form-control" placeholder="Santiago, Providencia..." value="Santiago">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="new-cli-direccion" style="color: #cbd5e1; font-size: 12px; font-weight: 700;">Dirección</label>
+              <input type="text" id="new-cli-direccion" class="form-control" placeholder="Av. Principal 123">
+            </div>
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="btn btn-outline" id="btn-close-add-client-form">Cerrar</button>
+            <button type="submit" class="btn btn-success" style="background: #10b981; border-color: #059669; color: #fff; font-weight: 700;">
+              <i class="fa-solid fa-floppy-disk"></i> Guardar Cliente en el Directorio
+            </button>
+          </div>
+        </form>
       </div>
 
       <!-- Filters Toolbar -->
@@ -398,6 +671,9 @@ A continuación le detallamos los productos destacados con precio especial de di
           <p>Envía mensajes personalizados y fotos a <strong class="badge-success" id="wa-target-count">0</strong> clientes con WhatsApp móvil.</p>
         </div>
         <div class="view-actions">
+          <button class="btn btn-outline" type="button" onclick="openApkDownloadModal()" style="border-color: #10b981; color: #10b981; font-weight: 700;">
+            <i class="fa-brands fa-android"></i> Descargar APK para Celular
+          </button>
           <button class="btn btn-outline" id="btn-load-prods-into-wa">
             <i class="fa-solid fa-tags"></i> Cargar Productos Seleccionados al Mensaje
           </button>
@@ -774,8 +1050,122 @@ A continuación le detallamos los productos destacados con precio especial de di
         <button class="btn btn-ghost" id="btn-wa-skip">Saltar este contacto</button>
         <button class="btn btn-outline" id="btn-close-wa-queue">Cerrar</button>
       </div>
+  <!-- ==================== MODAL: VISTA PREVIA COMPLETA ==================== -->
+  <div class="modal-overlay" id="email-preview-full-modal">
+    <div class="modal-card modal-lg" style="max-width: 920px; height: 90vh; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-eye text-gold"></i> Vista Previa Completa del Correo</h3>
+        <button class="btn-close" id="btn-close-preview-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body" style="flex: 1; padding: 0; overflow: hidden; background: #f8fafc;">
+        <iframe id="preview-modal-iframe" style="width: 100%; height: 100%; border: none; background: #ffffff;" title="Vista Previa Completa"></iframe>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <button type="button" class="btn btn-outline" id="btn-close-preview-modal-footer">Cerrar</button>
+        <button type="button" class="btn btn-gold" id="btn-preview-to-send">
+          <i class="fa-solid fa-paper-plane"></i> Proceder al Envío Masivo
+        </button>
+      </div>
     </div>
   </div>
+
+  <!-- ==================== MODAL: DESCARGAR APK ANDROID ==================== -->
+  <div class="modal-overlay" id="apk-download-modal">
+    <div class="modal-card" style="max-width: 540px; border-radius: 20px; overflow: hidden; border: 1.5px solid #10b981; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+      <div class="modal-header" style="background: linear-gradient(135deg, #0b0c10 0%, #13151b 100%); border-bottom: 1.5px solid rgba(16, 185, 129, 0.4); color: #fff; padding: 18px 24px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(16,185,129,0.15); border: 1px solid #10b981; display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 20px;">
+            <i class="fa-brands fa-android"></i>
+          </div>
+          <div>
+            <h3 style="color: #fff; font-size: 16px; margin: 0; font-weight: 800;">App Móvil Android (APK)</h3>
+            <p style="font-size: 11px; color: #94a3b8; margin: 0;">Distribuidora La Ruta del Oriente &middot; Despacho Rápido WhatsApp</p>
+          </div>
+        </div>
+        <button class="btn-close" type="button" onclick="closeApkDownloadModal()" style="color: #cbd5e1;"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body" style="padding: 24px; background: #0f1219; color: #cbd5e1;">
+        
+        <!-- Banner Informativo -->
+        <div style="background: linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(244,197,66,0.08) 100%); border: 1px solid rgba(16,185,129,0.3); border-radius: 14px; padding: 16px; text-align: center; margin-bottom: 20px;">
+          <div style="font-size: 13px; font-weight: 800; color: #10b981; margin-bottom: 4px;">
+            ⚡ Diseñada para usar 100% en el Teléfono
+          </div>
+          <p style="font-size: 12px; color: #cbd5e1; line-height: 1.5; margin: 0;">
+            Lleva los 773 clientes en tu bolsillo y despacha mensajes de WhatsApp a farmacias con un solo toque desde tu app de WhatsApp móvil.
+          </p>
+        </div>
+
+        <!-- Botón de Descarga Principal -->
+        <div style="text-align: center; margin-bottom: 22px;">
+          <a id="btn-apk-drive-download" href="#" target="_blank" style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 12px; font-size: 15px; font-weight: 800; box-shadow: 0 4px 20px rgba(16,185,129,0.4); width: 100%; transition: all 0.2s;">
+            <i class="fa-solid fa-download" style="font-size: 18px;"></i>
+            <span>Descargar APK desde Google Drive</span>
+          </a>
+          <div style="margin-top: 8px; font-size: 11px; color: #94a3b8;">
+            Archivo instalador oficial (.apk) para celulares Android
+          </div>
+        </div>
+
+        <!-- QR Code para escanear desde la pantalla con el celular -->
+        <div style="background: #181c26; border: 1px solid #282f3f; border-radius: 14px; padding: 16px; display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
+          <div style="background: #fff; padding: 8px; border-radius: 10px; flex-shrink: 0;">
+            <img id="apk-qr-image" src="" alt="QR Descarga APK" style="width: 100px; height: 100px; display: block;">
+          </div>
+          <div>
+            <div style="font-size: 12px; font-weight: 800; color: #f4c542; margin-bottom: 4px;">
+              <i class="fa-solid fa-qrcode"></i> ¿Estás en el computador?
+            </div>
+            <p style="font-size: 11px; color: #cbd5e1; line-height: 1.4; margin: 0;">
+              Apunta la cámara de tu celular a este código QR para abrir el enlace de Google Drive y descargar la aplicación directamente en tu teléfono.
+            </p>
+          </div>
+        </div>
+
+        <!-- Pasos de Instalación -->
+        <div style="border-top: 1px solid #282f3f; padding-top: 16px; margin-bottom: 16px;">
+          <div style="font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+            Pasos para instalar en tu teléfono:
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 11px; color: #e2e8f0;">
+            <div style="display: flex; gap: 8px; align-items: flex-start;">
+              <span style="background: #282f3f; color: #10b981; font-weight: 800; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">1</span>
+              <span>Descarga el archivo <strong>.apk</strong> desde el botón de Google Drive.</span>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: flex-start;">
+              <span style="background: #282f3f; color: #10b981; font-weight: 800; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">2</span>
+              <span>Toca la notificación de descarga y presiona <strong>Instalar</strong> (si tu celular te pide confirmación, elige <em>"Permitir desde esta fuente"</em>).</span>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: flex-start;">
+              <span style="background: #282f3f; color: #10b981; font-weight: 800; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">3</span>
+              <span>¡Listo! Se creará el acceso de <strong>La Ruta del Oriente</strong> en tu pantalla de inicio.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Configurar / Cambiar Enlace de Google Drive -->
+        <details style="background: #131722; border: 1px dashed #334155; border-radius: 10px; padding: 10px 14px;">
+          <summary style="font-size: 11px; color: #94a3b8; cursor: pointer; font-weight: 700;">
+            <i class="fa-solid fa-gear"></i> Administrar / Cambiar Enlace de Google Drive
+          </summary>
+          <div style="margin-top: 10px;">
+            <label style="display: block; font-size: 11px; color: #cbd5e1; margin-bottom: 6px;">Pega el enlace compartido de Google Drive de tu archivo APK:</label>
+            <div style="display: flex; gap: 6px;">
+              <input type="url" id="input-apk-drive-link" placeholder="https://drive.google.com/file/d/..." style="flex: 1; background: #0b0c10; border: 1px solid #334155; color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 11px;">
+              <button type="button" onclick="saveCustomApkDriveUrl()" class="btn btn-sm btn-gold" style="font-weight: 700; font-size: 11px;">Guardar</button>
+            </div>
+            <div id="apk-save-feedback" style="display: none; margin-top: 6px; font-size: 11px; color: #4ade80;">✓ Enlace guardado con éxito</div>
+          </div>
+        </details>
+
+      </div>
+      <div class="modal-footer" style="background: #0b0c10; border-top: 1px solid #282f3f; display: flex; justify-content: flex-end;">
+        <button type="button" class="btn btn-outline" onclick="closeApkDownloadModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  </div> <!-- Fin de #admin-app-root -->
 
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>

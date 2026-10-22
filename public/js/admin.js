@@ -640,9 +640,7 @@ async function resendAdminVerificationEmail() {
 }
 
 async function getCurrentAuthorizedAdminUser() {
-  await initFirebaseApp();
-  const auth = window.firebase.auth();
-  const user = auth.currentUser;
+  const user = await waitForCurrentUser(2500);
   return isAuthorizedAdminUser(user) ? user : null;
 }
 

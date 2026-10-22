@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>La Ruta del Oriente - Modo Móvil</title>
+  <meta name="theme-color" content="#0b0c10">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="/asset/favicon-96x96.png">
+  <link rel="apple-touch-icon" href="/asset/apple-touch-icon.png">
+  
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <link rel="stylesheet" href="css/mobile.css">
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+
+  <!-- ==================== AUTH BARRIER (MOBILE) ==================== -->
+  <div id="m-auth-barrier" style="position: fixed; inset: 0; background: #0b0c10; z-index: 9999; display: flex; flex-direction: column; justify-content: center; padding: 24px;">
+    <div style="text-align: center; margin-bottom: 24px;">
+      <div style="width: 64px; height: 64px; margin: 0 auto 12px; border-radius: 16px; background: #13151b; border: 1.5px solid #f4c542; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(244,197,66,0.25);">
+        <img src="/asset/logo-icon.png" style="width: 80%; height: 80%; object-fit: contain;">
+      </div>
+      <h2 style="font-size: 19px; font-weight: 800; color: #fff; margin-bottom: 4px;">La Ruta del Oriente</h2>
+      <p style="font-size: 12px; color: #94a3b8;">Modo Administrador Móvil</p>
+    </div>
+
+    <form onsubmit="handleMobileLogin(event)" class="m-card m-card-gold" style="padding: 20px;">
+      <div id="m-auth-error" style="display: none; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; font-size: 11px; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px;"></div>
+
+      <div class="m-form-group">
+        <label class="m-label">Correo Administrador</label>
+        <input type="email" id="m-login-email" class="m-input" value="distribuidorarutadeloriente@gmail.com" required>
+      </div>
+
+      <div class="m-form-group">
+        <label class="m-label">Contraseña</label>
+        <div style="position: relative;">
+          <input type="password" id="m-login-pass" class="m-input" placeholder="Tu contraseña" required style="padding-right: 38px;">
+          <button type="button" onclick="toggleMobilePass()" style="position: absolute; right: 10px; top: 10px; background: transparent; border: none; color: #94a3b8; font-size: 13px;">
+            <i id="m-eye-icon" class="fa-solid fa-eye"></i>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" id="m-btn-login" class="m-btn m-btn-gold" style="margin-top: 8px;">
+        <i class="fa-solid fa-shield-halved"></i> Ingresar al Administrador
+      </button>
+
+      <div style="text-align: center; margin-top: 14px;">
+        <a href="https://distribuidoralarutadeloriente.cl" style="font-size: 11px; color: #94a3b8; text-decoration: underline;">Volver a la Tienda Web</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- ==================== APP ROOT ==================== -->
+  <div id="m-app-root" style="display: none;">
+
+    <!-- Top Mobile App Bar -->
+    <header class="m-app-bar">
+      <div class="m-brand">
+        <div class="m-brand-icon">
+          <img src="/asset/logo-icon.png" alt="Logo">
+        </div>
+        <div class="m-brand-title">
+          La Ruta del Oriente
+          <span>Panel Móvil</span>
+        </div>
+      </div>
+      <div class="m-app-actions">
+        <a href="#" id="m-btn-apk-header" target="_blank" class="m-icon-btn" title="Descargar APK para Teléfono" style="background: rgba(16,185,129,0.2); color: #10b981; border: 1px solid rgba(16,185,129,0.4); text-decoration: none; display: flex; align-items: center; justify-content: center;">
+          <i class="fa-brands fa-android" style="font-size: 15px;"></i>
+        </a>
+        <div class="m-status-pill">
+          <span class="pulse-dot"></span>
+          <span>Activo</span>
+        </div>
+        <button class="m-icon-btn" onclick="initMobileApp()" title="Actualizar Datos">
+          <i class="fa-solid fa-rotate"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Horizontal Stats Strip -->
+    <div class="m-stats-strip">
+      <div class="m-stat-pill">
+        <i class="fa-solid fa-users"></i>
+        <span>Clientes: <strong id="m-stat-total">773</strong></span>
+      </div>
+      <div class="m-stat-pill pill-email">
+        <i class="fa-regular fa-envelope"></i>
+        <span>Correos: <strong id="m-stat-email">719</strong></span>
+      </div>
+      <div class="m-stat-pill pill-wa">
+        <i class="fa-brands fa-whatsapp"></i>
+        <span>WhatsApp: <strong id="m-stat-wa">684</strong></span>
+      </div>
+      <div class="m-stat-pill pill-prods">
+        <i class="fa-solid fa-boxes-stacked"></i>
+        <span>Corega: <strong>4</strong></span>
+      </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="m-container">
+
+      <!-- ==================== TAB 1: CAMPAÑA CORREO ==================== -->
+      <section id="m-tab-campaign" class="m-tab-pane active">
+        <!-- Products Horizontal Picker -->
+        <div class="m-card">
+          <div class="m-card-header">
+            <div class="m-card-title"><i class="fa-solid fa-fire text-gold"></i> 1. Productos a Ofrecer</div>
+            <span style="font-size: 10px; color: #94a3b8;">Toca para incluir</span>
+          </div>
+          <div class="m-prods-scroll" id="m-prods-picker-scroll">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+
+        <!-- Email Content Form -->
+        <div class="m-card">
+          <div class="m-card-header">
+            <div class="m-card-title"><i class="fa-regular fa-pen-to-square"></i> 2. Mensaje de Oferta</div>
+            <span class="m-badge m-badge-email" id="m-email-target-badge">719 seleccionados</span>
+          </div>
+
+          <div class="m-form-group">
+            <label class="m-label">Asunto del Correo</label>
+            <input type="text" id="m-email-subject" class="m-input" value="🔥 Ofertas Mayoristas Especiales para {farmacia} - La Ruta del Oriente">
+          </div>
+
+          <!-- Tags Bar -->
+          <div class="m-tags-bar">
+            <button type="button" class="m-tag-btn" data-m-insert="{farmacia}">+ {farmacia}</button>
+            <button type="button" class="m-tag-btn" data-m-insert="{contacto}">+ {contacto}</button>
+            <button type="button" class="m-tag-btn" data-m-insert="{comuna}">+ {comuna}</button>
+          </div>
+
+          <div class="m-form-group">
+            <label class="m-label">Cuerpo del Correo</label>
+            <textarea id="m-email-body" class="m-textarea" rows="5">Estimado/a {contacto},
+
+Le saludamos desde Distribuidora La Ruta del Oriente (distribuidoralarutadeloriente.cl).
+Le presentamos nuestras ofertas mayoristas con entrega directa para {farmacia}:</textarea>
+          </div>
+
+          <div class="m-grid-2">
+            <button type="button" class="m-btn m-btn-outline" onclick="openMobilePreviewSheet()">
+              <i class="fa-regular fa-eye"></i> Vista Previa
+            </button>
+            <button type="button" class="m-btn m-btn-gold" onclick="alert('Iniciando envío masivo a destinatarios seleccionados...')">
+              <i class="fa-solid fa-paper-plane"></i> Enviar Masivo
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Test Email Box -->
+        <div class="m-card m-card-gold">
+          <div class="m-card-header">
+            <div class="m-card-title"><i class="fa-solid fa-paper-plane"></i> 3. Correo de Prueba</div>
+            <span style="font-size: 10px; color: #f4c542; font-weight: 700;">Recomendado</span>
+          </div>
+          <p style="font-size: 11px; color: #cbd5e1; margin-bottom: 10px;">
+            Recibe el correo real con las fotos y precios en tu bandeja antes de enviar:
+          </p>
+          <div class="m-form-group" style="margin-bottom: 8px;">
+            <input type="email" id="m-test-email-input" class="m-input" value="distribuidorarutadeloriente@gmail.com" placeholder="Tu correo personal">
+          </div>
+          <button type="button" id="m-btn-test-send" class="m-btn m-btn-gold" onclick="sendMobileTestEmail()">
+            <i class="fa-solid fa-paper-plane"></i> Enviar Prueba a mi Correo
+          </button>
+          <div id="m-test-status-box" style="display: none; margin-top: 10px; font-size: 11px; padding: 10px; border-radius: 8px;"></div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 2: CLIENTES ==================== -->
+      <section id="m-tab-contacts" class="m-tab-pane">
+        <!-- Search & Filters -->
+        <div class="m-search-wrap">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="m-search-input" class="m-search-input" placeholder="Buscar farmacia, contacto, comuna..." oninput="filterMobileContacts()">
+        </div>
+
+        <div class="m-filters-scroll">
+          <button class="m-filter-chip active" onclick="setContactFilter('all', this)">Todos</button>
+          <button class="m-filter-chip" onclick="setContactFilter('email', this)"><i class="fa-regular fa-envelope"></i> Con Email</button>
+          <button class="m-filter-chip" onclick="setContactFilter('wa', this)"><i class="fa-brands fa-whatsapp"></i> Con WhatsApp</button>
+        </div>
+
+        <div class="m-form-group" style="margin-bottom: 12px;">
+          <select id="m-comuna-select" class="m-select" onchange="filterMobileContacts()">
+            <option value="all">Todas las Comunas</option>
+          </select>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 11px; color: #94a3b8;">
+          <span>Mostrando: <strong id="m-showing-count" style="color: #fff;">0</strong></span>
+          <button onclick="mState.selectedContactIds = new Set(mState.contacts.map(c=>c.id)); renderMobileContactsList(); updateMobileHeaderStats();" style="background: none; border: none; color: #f4c542; font-weight: 700; font-size: 11px;">Marcar Todos</button>
+        </div>
+
+        <!-- Contacts Card List -->
+        <div id="m-contacts-list">
+          <!-- Rendered via JS -->
+        </div>
+
+        <!-- Floating Add Client Button -->
+        <button class="m-fab" onclick="openMobileAddClientSheet()" title="Agregar Nuevo Cliente">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+      </section>
+
+      <!-- ==================== TAB 3: WHATSAPP ==================== -->
+      <section id="m-tab-whatsapp" class="m-tab-pane">
+        
+        <!-- APK Download Card for Phone -->
+        <div class="m-card" style="background: linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(244,197,66,0.08) 100%); border: 1.5px solid #10b981; margin-bottom: 12px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <i class="fa-brands fa-android" style="font-size: 18px; color: #10b981;"></i>
+              <strong style="color: #fff; font-size: 13px;">App Oficial para Celular (APK)</strong>
+            </div>
+            <span style="font-size: 10px; background: #10b981; color: #fff; padding: 2px 8px; border-radius: 99px; font-weight: 700;">Google Drive</span>
+          </div>
+          <p style="font-size: 11px; color: #cbd5e1; margin-bottom: 10px; line-height: 1.4;">
+            Instala la aplicación en tu teléfono para abrir tus despachos de WhatsApp al instante sin depender del navegador.
+          </p>
+          <div style="display: flex; gap: 8px;">
+            <a href="#" id="m-btn-apk-tab" target="_blank" class="m-btn m-btn-green" style="flex: 1; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; font-size: 12px; font-weight: 800;">
+              <i class="fa-solid fa-download"></i> Descargar APK
+            </a>
+            <button type="button" class="m-btn m-btn-outline" onclick="promptMobileApkDriveUrl()" style="padding: 10px; font-size: 12px;" title="Configurar Enlace Google Drive">
+              <i class="fa-solid fa-link"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="m-card">
+          <div class="m-card-header">
+            <div class="m-card-title"><i class="fa-brands fa-whatsapp" style="color: #25d366;"></i> Campaña WhatsApp</div>
+            <span class="m-badge m-badge-wa">684 móviles</span>
+          </div>
+
+          <div class="m-form-group">
+            <label class="m-label">Plantilla del Mensaje</label>
+            <textarea id="m-wa-template" class="m-textarea" rows="6">Hola *{contacto}*, gusto en saludarte! 👋
+Le escribimos de *Distribuidora La Ruta del Oriente* para *{farmacia}*.
+
+Tenemos stock inmediato de *Adhesivos Dentales Corega 70g* con precio mayorista:
+🔹 *Corega Max Bloqueo 70g*: $7.290
+🔹 *Corega Max Fijación 70g*: $7.290
+🔹 *Corega Ultra Sin Sabor 70g*: $6.890
+
+¿Cuántas cajas desea que le reservemos?</textarea>
+          </div>
+
+          <button type="button" class="m-btn m-btn-green" onclick="startMobileWaDispatcher()">
+            <i class="fa-solid fa-circle-play"></i> Iniciar Despachador Guiado
+          </button>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 4: PRODUCTOS ==================== -->
+      <section id="m-tab-products" class="m-tab-pane">
+        <div class="m-card m-card-gold" style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <h4 style="font-size: 13px; font-weight: 800; color: #f4c542;">Firebase Firestore</h4>
+            <p style="font-size: 10px; color: #94a3b8;">4 Productos Corega Conectados</p>
+          </div>
+          <button class="m-btn m-btn-sm m-btn-gold" onclick="loadMobileProducts(); alert('¡Productos sincronizados con Firebase!');">
+            <i class="fa-solid fa-rotate"></i> Sincronizar
+          </button>
+        </div>
+
+        <div id="m-catalog-list">
+          <!-- Rendered via JS -->
+        </div>
+      </section>
+
+      <!-- ==================== TAB 5: AJUSTES ==================== -->
+      <section id="m-tab-settings" class="m-tab-pane">
+        <div class="m-card">
+          <div class="m-card-header">
+            <div class="m-card-title"><i class="fa-solid fa-server"></i> Estado del Servidor</div>
+          </div>
+          <div style="font-size: 12px; color: #cbd5e1; line-height: 1.6;">
+            <div>Puerto Local: <strong>http://localhost:3000</strong></div>
+            <div>Web Producción: <a href="https://distribuidoralarutadeloriente.cl" target="_blank" style="color: #f4c542;">distribuidoralarutadeloriente.cl</a></div>
+            <div>Servidor Titan SMTP: <code>smtpout.secureserver.net (465)</code></div>
+          </div>
+        </div>
+
+        <div class="m-card">
+          <div class="m-card-header">
+            <div class="m-card-title"><i class="fa-solid fa-user-shield"></i> Cuenta Administradora</div>
+          </div>
+          <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 14px;">
+            Conectado como: <strong id="m-logged-email">distribuidorarutadeloriente@gmail.com</strong>
+          </p>
+          <button class="m-btn m-btn-outline" onclick="firebase.auth().signOut().then(()=>window.location.reload())" style="color: #ef4444; border-color: rgba(239,68,68,0.4);">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i> Cerrar Sesión
+          </button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ==================== BOTTOM NAVIGATION BAR ==================== -->
+    <nav class="m-bottom-nav">
+      <button class="m-nav-item active" data-target="m-tab-campaign">
+        <i class="fa-solid fa-paper-plane"></i>
+        <span>Campaña</span>
+      </button>
+      <button class="m-nav-item" data-target="m-tab-contacts">
+        <i class="fa-solid fa-users"></i>
+        <span>Clientes</span>
+      </button>
+      <button class="m-nav-item" data-target="m-tab-whatsapp">
+        <i class="fa-brands fa-whatsapp"></i>
+        <span>WhatsApp</span>
+      </button>
+      <button class="m-nav-item" data-target="m-tab-products">
+        <i class="fa-solid fa-boxes-stacked"></i>
+        <span>Productos</span>
+      </button>
+      <button class="m-nav-item" data-target="m-tab-settings">
+        <i class="fa-solid fa-gear"></i>
+        <span>Ajustes</span>
+      </button>
+    </nav>
+
+  </div> <!-- Fin de #m-app-root -->
+
+  <!-- ==================== BOTTOM SHEET: VISTA PREVIA ==================== -->
+  <div class="m-sheet-overlay" id="m-preview-sheet" onclick="if(event.target===this) closeMobilePreviewSheet()">
+    <div class="m-sheet-card">
+      <div class="m-sheet-handle"></div>
+      <div class="m-sheet-header">
+        <h3><i class="fa-regular fa-eye text-gold"></i> Vista Previa del Correo</h3>
+        <button class="m-icon-btn" onclick="closeMobilePreviewSheet()">✕</button>
+      </div>
+      <div class="m-sheet-body" style="padding: 0;">
+        <iframe id="m-preview-iframe" style="width: 100%; height: 60vh; border: none; background: #fff;"></iframe>
+      </div>
+      <div class="m-sheet-footer">
+        <button class="m-btn m-btn-outline" onclick="closeMobilePreviewSheet()">Cerrar</button>
+        <button class="m-btn m-btn-gold" onclick="closeMobilePreviewSheet(); alert('Listo para enviar.');">
+          Continuar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== BOTTOM SHEET: AGREGAR CLIENTE ==================== -->
+  <div class="m-sheet-overlay" id="m-add-client-sheet" onclick="if(event.target===this) closeMobileAddClientSheet()">
+    <div class="m-sheet-card">
+      <div class="m-sheet-handle"></div>
+      <div class="m-sheet-header">
+        <h3><i class="fa-solid fa-user-plus text-gold"></i> Nuevo Cliente / Farmacia</h3>
+        <button class="m-icon-btn" onclick="closeMobileAddClientSheet()">✕</button>
+      </div>
+      <form id="m-form-new-client" onsubmit="saveMobileNewClient(event)">
+        <div class="m-sheet-body">
+          <div class="m-form-group">
+            <label class="m-label">Farmacia / Razón Social *</label>
+            <input type="text" id="m-new-farmacia" class="m-input" placeholder="Ej: Farmacia San José" required>
+          </div>
+          <div class="m-form-group">
+            <label class="m-label">Persona de Contacto</label>
+            <input type="text" id="m-new-contacto" class="m-input" placeholder="Ej: Juan Pérez">
+          </div>
+          <div class="m-form-group">
+            <label class="m-label">Correo Electrónico *</label>
+            <input type="email" id="m-new-correo" class="m-input" placeholder="contacto@farmacia.cl" required>
+          </div>
+          <div class="m-form-group">
+            <label class="m-label">Teléfono / WhatsApp</label>
+            <input type="text" id="m-new-telefono" class="m-input" placeholder="+56 9 8765 4321">
+          </div>
+          <div class="m-form-group">
+            <label class="m-label">Comuna</label>
+            <input type="text" id="m-new-comuna" class="m-input" value="Santiago" placeholder="Comuna">
+          </div>
+        </div>
+        <div class="m-sheet-footer">
+          <button type="button" class="m-btn m-btn-outline" onclick="closeMobileAddClientSheet()">Cancelar</button>
+          <button type="submit" class="m-btn m-btn-gold">Guardar Cliente</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== BOTTOM SHEET: WHATSAPP DISPATCHER ==================== -->
+  <div class="m-sheet-overlay" id="m-wa-queue-sheet" onclick="if(event.target===this) closeMobileWaQueueSheet()">
+    <div class="m-sheet-card">
+      <div class="m-sheet-handle"></div>
+      <div class="m-sheet-header">
+        <h3><i class="fa-brands fa-whatsapp text-wa"></i> Despachador WhatsApp</h3>
+        <span class="m-badge m-badge-wa" id="m-wa-q-count">1 de 0</span>
+      </div>
+      <div class="m-sheet-body">
+        <div class="m-card" style="margin-bottom: 12px; background: #0f1219;">
+          <h4 id="m-wa-q-farmacia" style="font-size: 15px; font-weight: 800; color: #fff;">Farmacia</h4>
+          <p id="m-wa-q-contacto" style="font-size: 12px; color: #94a3b8; margin: 2px 0 8px;">Contacto</p>
+          <div style="font-size: 13px; font-weight: 700; color: #25d366;">
+            <i class="fa-brands fa-whatsapp"></i> <span id="m-wa-q-phone">+56 9 xxxx xxxx</span>
+          </div>
+        </div>
+
+        <div class="m-card" style="background: #0f1219;">
+          <label class="m-label" style="color: #94a3b8;">Mensaje a Enviar:</label>
+          <div id="m-wa-q-msg" style="font-size: 12px; line-height: 1.5; white-space: pre-wrap; color: #e2e8f0;"></div>
+        </div>
+      </div>
+      <div class="m-sheet-footer">
+        <button class="m-btn m-btn-outline" onclick="nextMobileWaQueueItem()">Saltar</button>
+        <a id="m-btn-open-wa-chat" href="#" target="_blank" class="m-btn m-btn-green" onclick="setTimeout(nextMobileWaQueueItem, 1200)">
+          <i class="fa-brands fa-whatsapp"></i> Abrir WhatsApp &raquo;
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/mobile.js"></script>
+  <script>
+    function toggleMobilePass() {
+      const pass = document.getElementById('m-login-pass');
+      const icon = document.getElementById('m-eye-icon');
+      if (pass.type === 'password') {
+        pass.type = 'text';
+        icon.className = 'fa-solid fa-eye-slash';
+      } else {
+        pass.type = 'password';
+        icon.className = 'fa-solid fa-eye';
+      }
+    }
+
+    async function handleMobileLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('m-login-email').value.trim();
+      const pass = document.getElementById('m-login-pass').value;
+      const errBox = document.getElementById('m-auth-error');
+      const btn = document.getElementById('m-btn-login');
+
+      errBox.style.display = 'none';
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Entrando...';
+
+      try {
+        const creds = await firebase.auth().signInWithEmailAndPassword(email, pass);
+        if (!isAuthorizedAdmin(creds.user)) {
+          await firebase.auth().signOut();
+          throw new Error('La cuenta no tiene permisos de administrador.');
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Ingresar al Administrador';
+        errBox.textContent = err.message || 'Error al iniciar sesión';
+        errBox.style.display = 'block';
+      }
+    }
+  </script>
+</body>
+</html>
