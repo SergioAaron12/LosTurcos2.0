@@ -682,7 +682,7 @@ async function saveMobileNewClient(e) {
                    farmacia.toLowerCase().includes('mechlook');
 
   const newContact = {
-    id: 'cli_custom_' + Date.now(),
+    id: 'custom_' + Date.now(),
     nombreFarmacia: farmacia || 'Cliente Especial',
     contacto: contacto || 'Encargado/a',
     correo: correo || '',

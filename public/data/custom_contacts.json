@@ -20,5 +20,27 @@
     "direccion": "Las Torres 3268, Recoleta, Chile",
     "rut": "",
     "createdAt": "2026-10-22T04:52:17.760Z"
+  },
+  {
+    "id": "custom_1792892529223",
+    "nombreFarmacia": "Los Sierra Prueba",
+    "contacto": "Samuel",
+    "correo": "misleh280@gmail.com",
+    "telefono": "",
+    "comuna": "Santiago",
+    "direccion": "",
+    "rut": "",
+    "createdAt": "2026-10-25T01:42:09.223Z"
+  },
+  {
+    "id": "custom_1792892687917",
+    "nombreFarmacia": "Los Sierra Prueba",
+    "contacto": "Samuel",
+    "correo": "Sierrapapalima35@gmail.com",
+    "telefono": "",
+    "comuna": "Santiago",
+    "direccion": "",
+    "rut": "",
+    "createdAt": "2026-10-25T01:44:47.917Z"
   }
 ]
