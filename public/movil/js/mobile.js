@@ -279,6 +279,14 @@ async function loadMobileContacts() {
     }
   } catch (e) {}
 
+  // Filtrar clientes marcados como eliminados
+  try {
+    const deleted = new Set(JSON.parse(localStorage.getItem('mkt_deleted_clients') || '[]'));
+    if (deleted.size > 0) {
+      list = list.filter(c => !deleted.has(c.id));
+    }
+  } catch (e) {}
+
   mState.contacts = list;
   mState.selectedContactIds = new Set(list.map(c => c.id));
   mState.filteredContacts = [...list];
@@ -353,6 +361,9 @@ function renderMobileContactsList() {
           ${waLink ? `<a href="${waLink}" target="_blank" class="m-action-icon-btn m-action-wa" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>` : ''}
           ${c.tieneEmail ? `<a href="mailto:${c.correo}" class="m-action-icon-btn m-action-email" title="Correo"><i class="fa-regular fa-envelope"></i></a>` : ''}
           ${c.telefonoDisplay ? `<a href="tel:${c.telefonoDisplay}" class="m-action-icon-btn m-action-call" title="Llamar"><i class="fa-solid fa-phone"></i></a>` : ''}
+          <button type="button" class="m-action-icon-btn m-action-del" onclick="deleteMobileContact('${c.id}')" title="Borrar Cliente" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5;">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
         </div>
       </div>
     `;
@@ -392,6 +403,108 @@ function toggleContactSelection(id) {
     if (cb) cb.checked = isSelected;
   }
   updateMobileHeaderStats();
+}
+
+async function deleteMobileContact(id) {
+  const client = mState.contacts.find(c => c.id === id);
+  if (!client) return;
+
+  const name = client.nombreFarmacia || client.contacto || 'este cliente';
+  if (!confirm(`¿Estás seguro de que deseas eliminar a "${name}"?`)) {
+    return;
+  }
+
+  // 1. Eliminar de Cloud Firestore si aplica
+  try {
+    if (window.firebase && typeof window.firebase.firestore === 'function') {
+      const db = window.firebase.firestore();
+      await db.collection('custom_clients').doc(id).delete();
+    }
+  } catch (err) {
+    console.warn('Error al borrar de Firestore:', err.message);
+  }
+
+  // 2. Eliminar de localStorage custom y registrar en lista de borrados
+  try {
+    const custom = JSON.parse(localStorage.getItem('mkt_custom_clients') || '[]');
+    const filtered = custom.filter(c => c.id !== id);
+    localStorage.setItem('mkt_custom_clients', JSON.stringify(filtered));
+
+    const deleted = JSON.parse(localStorage.getItem('mkt_deleted_clients') || '[]');
+    if (!deleted.includes(id)) {
+      deleted.push(id);
+      localStorage.setItem('mkt_deleted_clients', JSON.stringify(deleted));
+    }
+  } catch (err) {}
+
+  // 3. Notificar al backend local en segundo plano
+  try {
+    mApi(`/api/contacts/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {});
+  } catch (err) {}
+
+  // 4. Actualizar estado y vista inmediatamente
+  mState.contacts = mState.contacts.filter(c => c.id !== id);
+  mState.filteredContacts = mState.filteredContacts.filter(c => c.id !== id);
+  mState.selectedContactIds.delete(id);
+
+  renderMobileContactsList();
+  populateMobileComunas();
+  updateMobileHeaderStats();
+  alert(`✓ Cliente "${name}" eliminado correctamente.`);
+}
+
+async function deleteSelectedMobileContacts() {
+  const selectedCount = mState.selectedContactIds.size;
+  if (!selectedCount) {
+    alert('No tienes ningún cliente seleccionado para borrar. Marca las casillas de los clientes que desees eliminar.');
+    return;
+  }
+
+  if (!confirm(`¿Deseas eliminar los ${selectedCount} clientes marcados? Esta acción los quitará de la lista.`)) {
+    return;
+  }
+
+  const idsToDelete = Array.from(mState.selectedContactIds);
+
+  // Firestore
+  try {
+    if (window.firebase && typeof window.firebase.firestore === 'function') {
+      const db = window.firebase.firestore();
+      for (const id of idsToDelete) {
+        db.collection('custom_clients').doc(id).delete().catch(() => {});
+      }
+    }
+  } catch (err) {}
+
+  // LocalStorage
+  try {
+    const custom = JSON.parse(localStorage.getItem('mkt_custom_clients') || '[]');
+    const filtered = custom.filter(c => !mState.selectedContactIds.has(c.id));
+    localStorage.setItem('mkt_custom_clients', JSON.stringify(filtered));
+
+    const deleted = JSON.parse(localStorage.getItem('mkt_deleted_clients') || '[]');
+    for (const id of idsToDelete) {
+      if (!deleted.includes(id)) deleted.push(id);
+    }
+    localStorage.setItem('mkt_deleted_clients', JSON.stringify(deleted));
+  } catch (err) {}
+
+  // Notificar al backend local
+  for (const id of idsToDelete) {
+    try {
+      mApi(`/api/contacts/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {});
+    } catch (e) {}
+  }
+
+  // Actualizar listas
+  mState.contacts = mState.contacts.filter(c => !mState.selectedContactIds.has(c.id));
+  mState.filteredContacts = mState.filteredContacts.filter(c => !mState.selectedContactIds.has(c.id));
+  mState.selectedContactIds.clear();
+
+  renderMobileContactsList();
+  populateMobileComunas();
+  updateMobileHeaderStats();
+  alert(`✓ Se eliminaron ${selectedCount} clientes correctamente.`);
 }
 
 function filterMobileContacts() {
