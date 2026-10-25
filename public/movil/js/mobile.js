@@ -40,36 +40,40 @@ const mState = {
 };
 
 // ================= API CALLER =================
-function getApiEndpoint(ep) {
+const DEFAULT_SERVER_URL = 'http://192.168.100.19:3000';
+
+function getServerBaseUrl() {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return ep;
+    return '';
   }
-  return `${LOCAL_API_BASE}${ep}`;
+  return localStorage.getItem('m_server_url') || DEFAULT_SERVER_URL;
+}
+
+function getApiEndpoint(ep) {
+  const base = getServerBaseUrl();
+  return `${base}${ep}`;
 }
 
 async function mApi(endpoint, options = {}) {
   const url = getApiEndpoint(endpoint);
   let res;
   try {
-    res = await fetch(url, options);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), options.timeout || 12000);
+    res = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timer);
   } catch (err) {
-    if (!url.startsWith(LOCAL_API_BASE)) {
-      res = await fetch(`${LOCAL_API_BASE}${endpoint}`, options);
-    } else {
-      throw new Error('Servidor de correos no responde. Ejecuta "npm run envios" en tu PC.');
-    }
+    throw new Error(`No se pudo conectar con el servidor de envíos (${getServerBaseUrl()}). Asegúrate de ejecutar "npm run envios" en tu PC.`);
   }
 
   const contentType = res.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) {
     const text = await res.text();
-    if (text.trim().startsWith('<')) {
-      if (!url.startsWith(LOCAL_API_BASE)) {
-        return mApi(`${LOCAL_API_BASE}${endpoint}`, options);
-      }
-      throw new Error('Error al conectar con el servicio de envíos.');
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      throw new Error('Respuesta no válida del servidor.');
     }
-    return JSON.parse(text);
   }
   return await res.json();
 }
@@ -713,6 +717,230 @@ function promptMobileApkDriveUrl() {
     }
   }
 }
+
+// ================= MASS EMAIL CAMPAIGN =================
+let mobileCampaignInterval = null;
+
+async function startMobileMassEmailCampaign() {
+  const selectedWithEmail = mState.contacts.filter(c => mState.selectedContactIds.has(c.id) && c.tieneEmail);
+  if (!selectedWithEmail.length) {
+    alert('No hay farmacias seleccionadas con correo electrónico en la lista.');
+    return;
+  }
+
+  const serverUrl = getServerBaseUrl();
+  const btnMass = document.getElementById('m-btn-mass-email');
+  if (btnMass) btnMass.disabled = true;
+
+  // 1. Probar conectividad con el servidor Node.js
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    const probe = await fetch(`${serverUrl}/api/config`, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!probe.ok) throw new Error('Servidor offline');
+  } catch (err) {
+    if (btnMass) btnMass.disabled = false;
+    alert(
+      `⚠️ No se pudo conectar con el Servidor de Envíos Titan SMTP (${serverUrl}).\n\n` +
+      `Para enviar correos masivos a las ${selectedWithEmail.length} farmacias:\n` +
+      `1. En tu computador abre la terminal y escribe: npm run envios\n` +
+      `2. Tu celular y el computador deben estar en la misma red Wi-Fi.\n\n` +
+      `Tip: En la pestaña "Ajustes" puedes cambiar la IP del PC si cambió.`
+    );
+    return;
+  }
+
+  if (btnMass) btnMass.disabled = false;
+
+  const subject = document.getElementById('m-email-subject')?.value || 'Ofertas Corega Mayorista';
+  const body = document.getElementById('m-email-body')?.value || '';
+  const prods = Array.from(mState.selectedProductIds);
+
+  const confirmSend = confirm(
+    `¿Iniciar despacho masivo a ${selectedWithEmail.length} farmacias seleccionadas?\n\n` +
+    `Asunto: ${subject}\nProductos incluidos: ${prods.length}`
+  );
+  if (!confirmSend) return;
+
+  openMobileMassEmailSheet();
+
+  const progCurrent = document.getElementById('m-prog-current');
+  const progTotal = document.getElementById('m-prog-total');
+  const progPercent = document.getElementById('m-prog-percent');
+  const progBar = document.getElementById('m-prog-bar');
+  const progSuccess = document.getElementById('m-prog-success');
+  const progFailed = document.getElementById('m-prog-failed');
+  const progLogs = document.getElementById('m-prog-logs');
+  const stopBtn = document.getElementById('m-btn-stop-campaign');
+  const doneBtn = document.getElementById('m-btn-done-campaign');
+
+  if (progCurrent) progCurrent.textContent = '0';
+  if (progTotal) progTotal.textContent = selectedWithEmail.length;
+  if (progPercent) progPercent.textContent = '0%';
+  if (progBar) progBar.style.width = '0%';
+  if (progSuccess) progSuccess.textContent = '0';
+  if (progFailed) progFailed.textContent = '0';
+  if (stopBtn) stopBtn.style.display = 'inline-flex';
+  if (doneBtn) doneBtn.style.display = 'none';
+  if (progLogs) progLogs.innerHTML = `<div style="color: #38bdf8;"><i class="fa-solid fa-spinner fa-spin"></i> Contactando servidor Titan y comenzando envíos...</div>`;
+
+  try {
+    const res = await mApi('/api/email/send-batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        targetContactIds: selectedWithEmail.map(c => c.id),
+        subject,
+        title: subject,
+        body,
+        selectedProductIds: prods,
+        ctaText: 'Visitar Catálogo en la Web',
+        ctaUrl: 'https://distribuidoralarutadeloriente.cl',
+        senderName: 'Distribuidora La Ruta del Oriente'
+      })
+    });
+
+    if (!res.success) throw new Error(res.error || 'Error al iniciar campaña');
+
+    if (mobileCampaignInterval) clearInterval(mobileCampaignInterval);
+    mobileCampaignInterval = setInterval(pollMobileCampaignStatus, 1200);
+  } catch (err) {
+    if (progLogs) progLogs.innerHTML = `<div style="color: #f87171;">✗ Error al iniciar: ${err.message}</div>`;
+  }
+}
+
+async function pollMobileCampaignStatus() {
+  try {
+    const data = await mApi('/api/email/status');
+    const campaign = data.campaign || data;
+
+    const progCurrent = document.getElementById('m-prog-current');
+    const progTotal = document.getElementById('m-prog-total');
+    const progPercent = document.getElementById('m-prog-percent');
+    const progBar = document.getElementById('m-prog-bar');
+    const progSuccess = document.getElementById('m-prog-success');
+    const progFailed = document.getElementById('m-prog-failed');
+    const progLogs = document.getElementById('m-prog-logs');
+    const stopBtn = document.getElementById('m-btn-stop-campaign');
+    const doneBtn = document.getElementById('m-btn-done-campaign');
+
+    const total = campaign.total || 0;
+    const current = campaign.current || 0;
+    const success = campaign.success || 0;
+    const failed = campaign.failed || 0;
+    const percent = total > 0 ? Math.round((current / total) * 100) : 0;
+
+    if (progCurrent) progCurrent.textContent = current;
+    if (progTotal) progTotal.textContent = total;
+    if (progPercent) progPercent.textContent = `${percent}%`;
+    if (progBar) progBar.style.width = `${percent}%`;
+    if (progSuccess) progSuccess.textContent = success;
+    if (progFailed) progFailed.textContent = failed;
+
+    if (campaign.logs && campaign.logs.length && progLogs) {
+      progLogs.innerHTML = campaign.logs.slice(-10).map(log => {
+        if (log.status === 'success') {
+          return `<div style="color: #4ade80;">✓ ${log.name || log.email || 'Enviado'}</div>`;
+        } else if (log.status === 'error') {
+          return `<div style="color: #f87171;">✗ ${log.name || log.email || ''} - ${log.error || 'Error'}</div>`;
+        } else {
+          return `<div style="color: #94a3b8;">${log.message || ''}</div>`;
+        }
+      }).join('');
+    }
+
+    if (!campaign.running) {
+      clearInterval(mobileCampaignInterval);
+      mobileCampaignInterval = null;
+      if (stopBtn) stopBtn.style.display = 'none';
+      if (doneBtn) doneBtn.style.display = 'inline-flex';
+      if (progLogs) progLogs.innerHTML += `<div style="color: #f4c542; font-weight: bold; margin-top: 8px;">🎉 ¡Campaña finalizada! Exitosos: ${success}, Fallidos: ${failed}</div>`;
+    }
+  } catch (err) {
+    console.warn('Error al consultar estado de campaña:', err);
+  }
+}
+
+async function stopMobileMassEmailCampaign() {
+  try {
+    await mApi('/api/email/stop', { method: 'POST' });
+    alert('Se solicitó detener la campaña.');
+  } catch (e) {
+    alert('No se pudo contactar al servidor para detener.');
+  }
+}
+
+function openMobileMassEmailSheet() {
+  document.getElementById('m-mass-email-sheet')?.classList.add('active');
+}
+
+function closeMobileMassEmailSheet() {
+  if (mobileCampaignInterval) {
+    clearInterval(mobileCampaignInterval);
+    mobileCampaignInterval = null;
+  }
+  document.getElementById('m-mass-email-sheet')?.classList.remove('active');
+}
+
+async function testAndSaveMobileServerUrl() {
+  const input = document.getElementById('m-input-server-url');
+  let val = (input?.value || '').trim();
+  if (!val) val = DEFAULT_SERVER_URL;
+  if (!val.startsWith('http://') && !val.startsWith('https://')) {
+    val = 'http://' + val;
+  }
+  val = val.replace(/\/+$/, '');
+
+  const msgBox = document.getElementById('m-server-test-msg');
+  if (msgBox) {
+    msgBox.style.display = 'block';
+    msgBox.style.background = 'rgba(56, 189, 248, 0.15)';
+    msgBox.style.color = '#38bdf8';
+    msgBox.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Probando conexión con ' + val + '...';
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(`${val}/api/config`, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    localStorage.setItem('m_server_url', val);
+    if (input) input.value = val;
+    if (msgBox) {
+      msgBox.style.background = 'rgba(16, 185, 129, 0.15)';
+      msgBox.style.color = '#4ade80';
+      msgBox.innerHTML = '✓ ¡Conectado con éxito al servidor Titan Mail de tu PC!';
+    }
+    const badge = document.getElementById('m-server-status-badge');
+    if (badge) {
+      badge.textContent = 'En Línea';
+      badge.style.background = 'rgba(16, 185, 129, 0.2)';
+      badge.style.color = '#4ade80';
+    }
+  } catch (err) {
+    if (msgBox) {
+      msgBox.style.background = 'rgba(239, 68, 68, 0.15)';
+      msgBox.style.color = '#f87171';
+      msgBox.innerHTML = `✗ No responde ${val}. Revisa que "npm run envios" esté corriendo en tu PC y estén en la misma Wi-Fi.`;
+    }
+    const badge = document.getElementById('m-server-status-badge');
+    if (badge) {
+      badge.textContent = 'Desconectado';
+      badge.style.background = 'rgba(239, 68, 68, 0.2)';
+      badge.style.color = '#f87171';
+    }
+  }
+}
+
+// Inicializar campo de servidor al cargar
+document.addEventListener('DOMContentLoaded', () => {
+  const currentUrl = localStorage.getItem('m_server_url') || DEFAULT_SERVER_URL;
+  const input = document.getElementById('m-input-server-url');
+  if (input) input.value = currentUrl;
+});
 
 
 

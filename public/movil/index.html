@@ -160,8 +160,8 @@ Le presentamos nuestras ofertas mayoristas con entrega directa para {farmacia}:<
             <button type="button" class="m-btn m-btn-outline" onclick="openMobilePreviewSheet()">
               <i class="fa-regular fa-eye"></i> Vista Previa
             </button>
-            <button type="button" class="m-btn m-btn-gold" onclick="alert('Iniciando envío masivo a destinatarios seleccionados...')">
-              <i class="fa-solid fa-paper-plane"></i> Enviar Masivo
+            <button type="button" id="m-btn-mass-email" class="m-btn m-btn-gold" onclick="startMobileMassEmailCampaign()">
+              <i class="fa-solid fa-paper-plane"></i> Iniciar Envío Masivo
             </button>
           </div>
         </div>
@@ -326,6 +326,24 @@ Tenemos stock inmediato de *Adhesivos Dentales Corega 70g* con precio mayorista:
             </button>
           </div>
         </div>
+
+        <!-- Conexión Servidor Titan Mail (PC) -->
+        <div class="m-card" style="border: 1px solid rgba(244,197,66,0.3); background: #131722;">
+          <div class="m-card-header" style="margin-bottom: 6px;">
+            <div class="m-card-title"><i class="fa-solid fa-server text-gold"></i> Motor de Envíos Titan SMTP</div>
+            <span class="m-badge" id="m-server-status-badge" style="background: rgba(148,163,184,0.15); color: #cbd5e1; font-size: 10px;">Verificando...</span>
+          </div>
+          <p style="font-size: 11px; color: #cbd5e1; line-height: 1.4; margin-bottom: 10px;">
+            Para enviar correos masivos a farmacias, tu PC debe tener <code>npm run envios</code> activo y estar en la misma red Wi-Fi:
+          </p>
+          <div class="m-form-group" style="margin-bottom: 8px;">
+            <input type="text" id="m-input-server-url" class="m-input" placeholder="http://192.168.100.19:3000">
+          </div>
+          <button type="button" class="m-btn m-btn-gold" style="width: 100%; font-size: 12px; padding: 9px;" onclick="testAndSaveMobileServerUrl()">
+            <i class="fa-solid fa-network-wired"></i> Probar Conexión con mi PC
+          </button>
+          <div id="m-server-test-msg" style="display: none; margin-top: 8px; font-size: 11px; padding: 8px; border-radius: 8px;"></div>
+        </div>
       </section>
 
     </main>
@@ -453,6 +471,47 @@ Tenemos stock inmediato de *Adhesivos Dentales Corega 70g* con precio mayorista:
         <a id="m-btn-open-wa-chat" href="#" target="_blank" class="m-btn m-btn-green" onclick="setTimeout(nextMobileWaQueueItem, 1200)">
           <i class="fa-brands fa-whatsapp"></i> Abrir WhatsApp &raquo;
         </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== BOTTOM SHEET: PROGRESO ENVÍO MASIVO CORREO ==================== -->
+  <div class="m-sheet-overlay" id="m-mass-email-sheet">
+    <div class="m-sheet-card">
+      <div class="m-sheet-handle"></div>
+      <div class="m-sheet-header">
+        <h3><i class="fa-solid fa-paper-plane text-gold"></i> Despacho Masivo de Correos</h3>
+        <button class="m-icon-btn" onclick="closeMobileMassEmailSheet()">✕</button>
+      </div>
+      <div class="m-sheet-body">
+        <div class="m-card" style="text-align: center; margin-bottom: 12px; background: #0f1219;">
+          <div style="font-size: 32px; font-weight: 800; color: #f4c542; margin-bottom: 4px;" id="m-prog-percent">0%</div>
+          <div style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">
+            Despachando <strong id="m-prog-current" style="color: #fff;">0</strong> de <strong id="m-prog-total" style="color: #fff;">0</strong> farmacias
+          </div>
+          <div style="width: 100%; height: 10px; background: #1e2433; border-radius: 999px; overflow: hidden; margin-bottom: 14px;">
+            <div id="m-prog-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #f4c542, #fbbf24); border-radius: 999px; transition: width 0.3s ease;"></div>
+          </div>
+          <div style="display: flex; justify-content: space-around; font-size: 12px;">
+            <span style="color: #10b981; font-weight: 700;"><i class="fa-solid fa-circle-check"></i> <span id="m-prog-success">0</span> Exitosos</span>
+            <span style="color: #ef4444; font-weight: 700;"><i class="fa-solid fa-circle-xmark"></i> <span id="m-prog-failed">0</span> Fallidos</span>
+          </div>
+        </div>
+
+        <div class="m-card" style="background: #090a0f; border: 1px solid #1e2433; padding: 10px; max-height: 200px; overflow-y: auto;">
+          <div style="font-size: 10px; color: #94a3b8; margin-bottom: 6px; font-weight: 700; text-transform: uppercase;">Registro en Vivo:</div>
+          <div id="m-prog-logs" style="font-size: 11px; font-family: monospace; display: flex; flex-direction: column; gap: 4px; color: #cbd5e1;">
+            <div style="color: #94a3b8;">Esperando inicio...</div>
+          </div>
+        </div>
+      </div>
+      <div class="m-sheet-footer">
+        <button type="button" id="m-btn-stop-campaign" class="m-btn m-btn-outline" style="border-color: #ef4444; color: #fca5a5;" onclick="stopMobileMassEmailCampaign()">
+          <i class="fa-solid fa-circle-stop"></i> Detener Envío
+        </button>
+        <button type="button" id="m-btn-done-campaign" class="m-btn m-btn-gold" style="display: none;" onclick="closeMobileMassEmailSheet()">
+          ¡Completado! Cerrar
+        </button>
       </div>
     </div>
   </div>
