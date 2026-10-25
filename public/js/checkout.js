@@ -250,7 +250,8 @@ async function renderCheckout() {
   }
 }
 
-const WHATSAPP_QUOTE_PHONE = '56997862467';
+const WHATSAPP_QUOTE_PHONE = '56998750387';
+const WHATSAPP_QUOTE_PHONE_2 = '56962801676';
 
 async function sendWhatsAppQuote(event) {
   event.preventDefault();

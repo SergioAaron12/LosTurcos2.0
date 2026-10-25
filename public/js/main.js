@@ -1800,8 +1800,8 @@ function requestQuoteOnWhatsApp() {
   openWhatsAppChat(message);
 }
 
-const WHATSAPP_NUMBER = '56997862467';
-const WHATSAPP_NUMBER_2 = '56998750387';
+const WHATSAPP_NUMBER = '56998750387';
+const WHATSAPP_NUMBER_2 = '56962801676';
 
 function openWhatsAppChat(message, useSecondary = false) {
   const number = useSecondary ? WHATSAPP_NUMBER_2 : WHATSAPP_NUMBER;

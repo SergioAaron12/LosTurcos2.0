@@ -660,7 +660,7 @@ function getEmailPreviewPayload() {
   const ctaText = DOM.emailCtaText.value || 'Visitar Catálogo Completo en la Web';
   const ctaUrl = DOM.emailCtaUrl.value || 'https://distribuidoralarutadeloriente.cl';
   const senderName = DOM.emailSenderName.value || 'Distribuidora La Ruta del Oriente';
-  const senderPhone = DOM.emailSenderPhone.value || '+56 9 9786 2467';
+  const senderPhone = DOM.emailSenderPhone.value || '+56 9 9875 0387 / +56 9 6280 1676';
 
   let bannerUrl = null;
   if (DOM.cbUseAsBanner && DOM.cbUseAsBanner.checked && state.uploadedEmailFiles.length > 0) {
@@ -797,7 +797,7 @@ function buildEmailHtmlPreview(data) {
           <!-- Contacto / Firma -->
           <div style="margin-top: 26px; padding-top: 18px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.5;">
             <strong style="color: #0b0c10;">${data.senderName || 'Distribuidora La Ruta del Oriente'}</strong><br/>
-            WhatsApp de Ventas: <strong style="color: #059669;">${data.senderPhone || '+56 9 9786 2467'}</strong><br/>
+            WhatsApp de Ventas: <strong style="color: #059669;">${data.senderPhone || '+56 9 9875 0387 / +56 9 6280 1676'}</strong><br/>
             Santiago de Chile &middot; <a href="https://distribuidoralarutadeloriente.cl" target="_blank" style="color: #f4c542; text-decoration: underline;">distribuidoralarutadeloriente.cl</a>
           </div>
         </div>
