@@ -205,9 +205,25 @@ Le presentamos nuestras ofertas mayoristas con entrega directa para {farmacia}:<
           </select>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 11px; color: #94a3b8;">
-          <span>Mostrando: <strong id="m-showing-count" style="color: #fff;">0</strong></span>
-          <button onclick="mState.selectedContactIds = new Set(mState.contacts.map(c=>c.id)); renderMobileContactsList(); updateMobileHeaderStats();" style="background: none; border: none; color: #f4c542; font-weight: 700; font-size: 11px;">Marcar Todos</button>
+        <!-- Botón destacado: Agregar Nuevo Cliente -->
+        <button type="button" class="m-btn m-btn-gold" onclick="openMobileAddClientSheet()" style="width: 100%; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; font-size: 13px; padding: 12px; border-radius: 12px; box-shadow: 0 4px 14px rgba(244,197,66,0.25);">
+          <i class="fa-solid fa-user-plus"></i> + Agregar Nuevo Cliente
+        </button>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 11px; color: #94a3b8; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span>Mostrando: <strong id="m-showing-count" style="color: #fff;">0</strong></span>
+            <span style="color: #475569;">•</span>
+            <span style="color: #f4c542; font-weight: 700;"><strong id="m-selected-count" style="color: #f4c542;">0</strong> marcados</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button type="button" onclick="selectAllMobileContacts(true)" style="background: rgba(244,197,66,0.15); border: 1px solid rgba(244,197,66,0.4); color: #f4c542; font-weight: 700; font-size: 11px; padding: 5px 9px; border-radius: 6px; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <i class="fa-solid fa-check-double"></i> Marcar Todos
+            </button>
+            <button type="button" onclick="selectAllMobileContacts(false)" style="background: rgba(148,163,184,0.12); border: 1px solid rgba(148,163,184,0.3); color: #e2e8f0; font-weight: 700; font-size: 11px; padding: 5px 9px; border-radius: 6px; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <i class="fa-regular fa-square"></i> Desmarcar Cuadros
+            </button>
+          </div>
         </div>
 
         <!-- Contacts Card List -->
@@ -365,35 +381,46 @@ Tenemos stock inmediato de *Adhesivos Dentales Corega 70g* con precio mayorista:
     <div class="m-sheet-card">
       <div class="m-sheet-handle"></div>
       <div class="m-sheet-header">
-        <h3><i class="fa-solid fa-user-plus text-gold"></i> Nuevo Cliente / Farmacia</h3>
+        <h3><i class="fa-solid fa-user-plus text-gold"></i> Nuevo Cliente / Farmacia / Taller</h3>
         <button class="m-icon-btn" onclick="closeMobileAddClientSheet()">✕</button>
       </div>
       <form id="m-form-new-client" onsubmit="saveMobileNewClient(event)">
         <div class="m-sheet-body">
           <div class="m-form-group">
-            <label class="m-label">Farmacia / Razón Social *</label>
-            <input type="text" id="m-new-farmacia" class="m-input" placeholder="Ej: Farmacia San José" required>
+            <label class="m-label">Tipo de Cliente / Negocio</label>
+            <select id="m-new-tipo" class="m-select">
+              <option value="farmacia">🏥 Farmacia / Botica / Drogería</option>
+              <option value="taller">🔧 Taller Mecánico / MechLook</option>
+              <option value="particular">👤 Particular / Empresa</option>
+            </select>
+          </div>
+          <div class="m-form-group">
+            <label class="m-label">Nombre Comercial / Razón Social *</label>
+            <input type="text" id="m-new-farmacia" class="m-input" placeholder="Ej: Farmacia San José o MechLook SpA" required>
           </div>
           <div class="m-form-group">
             <label class="m-label">Persona de Contacto</label>
-            <input type="text" id="m-new-contacto" class="m-input" placeholder="Ej: Juan Pérez">
+            <input type="text" id="m-new-contacto" class="m-input" placeholder="Ej: Sergio Peña / Juan Pérez">
           </div>
           <div class="m-form-group">
-            <label class="m-label">Correo Electrónico *</label>
-            <input type="email" id="m-new-correo" class="m-input" placeholder="contacto@farmacia.cl" required>
+            <label class="m-label">Teléfono / WhatsApp *</label>
+            <input type="tel" id="m-new-telefono" class="m-input" placeholder="+56 9 8765 4321" required>
+            <span style="font-size: 10px; color: #94a3b8; display: block; margin-top: 3px;">Se usará para enviar mensajes de WhatsApp y llamadas directas.</span>
           </div>
           <div class="m-form-group">
-            <label class="m-label">Teléfono / WhatsApp</label>
-            <input type="text" id="m-new-telefono" class="m-input" placeholder="+56 9 8765 4321">
+            <label class="m-label">Correo Electrónico (Opcional)</label>
+            <input type="email" id="m-new-correo" class="m-input" placeholder="contacto@cliente.cl">
           </div>
           <div class="m-form-group">
-            <label class="m-label">Comuna</label>
+            <label class="m-label">Comuna / Ciudad</label>
             <input type="text" id="m-new-comuna" class="m-input" value="Santiago" placeholder="Comuna">
           </div>
         </div>
         <div class="m-sheet-footer">
           <button type="button" class="m-btn m-btn-outline" onclick="closeMobileAddClientSheet()">Cancelar</button>
-          <button type="submit" class="m-btn m-btn-gold">Guardar Cliente</button>
+          <button type="submit" id="m-btn-save-client" class="m-btn m-btn-gold">
+            <i class="fa-solid fa-floppy-disk"></i> Guardar Cliente
+          </button>
         </div>
       </form>
     </div>

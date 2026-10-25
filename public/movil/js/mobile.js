@@ -288,14 +288,19 @@ function updateMobileHeaderStats() {
   const total = mState.contacts.length || 773;
   const wa = mState.contacts.filter(c => c.tieneWhatsApp).length || 684;
   const prods = mState.products.length || 4;
+  const selectedCount = mState.selectedContactIds.size;
 
   const totalEl = document.getElementById('m-stat-total');
   const waEl = document.getElementById('m-stat-wa');
   const prodsEl = document.getElementById('m-stat-prods');
+  const selectedCountEl = document.getElementById('m-selected-count');
+  const emailTargetEl = document.getElementById('m-email-target-badge');
 
   if (totalEl) totalEl.textContent = total;
   if (waEl) waEl.textContent = wa;
   if (prodsEl) prodsEl.textContent = prods;
+  if (selectedCountEl) selectedCountEl.textContent = selectedCount;
+  if (emailTargetEl) emailTargetEl.textContent = `${selectedCount} seleccionados`;
 }
 
 function renderMobileContactsList() {
@@ -305,6 +310,8 @@ function renderMobileContactsList() {
 
   const slice = mState.filteredContacts.slice(0, 100);
   if (countEl) countEl.textContent = `${slice.length} de ${mState.filteredContacts.length}`;
+  const selEl = document.getElementById('m-selected-count');
+  if (selEl) selEl.textContent = mState.selectedContactIds.size;
 
   if (!slice.length) {
     container.innerHTML = `<div style="text-align: center; padding: 30px 10px; color: #94a3b8; font-size: 13px;">No se encontraron clientes para esta búsqueda.</div>`;
@@ -348,13 +355,38 @@ function renderMobileContactsList() {
   }).join('');
 }
 
+function selectAllMobileContacts(select = true) {
+  if (select) {
+    if (mState.filteredContacts && mState.filteredContacts.length > 0) {
+      mState.filteredContacts.forEach(c => mState.selectedContactIds.add(c.id));
+    } else {
+      mState.contacts.forEach(c => mState.selectedContactIds.add(c.id));
+    }
+  } else {
+    if (mState.filteredContacts && mState.filteredContacts.length < mState.contacts.length) {
+      mState.filteredContacts.forEach(c => mState.selectedContactIds.delete(c.id));
+    } else {
+      mState.selectedContactIds.clear();
+    }
+  }
+  renderMobileContactsList();
+  updateMobileHeaderStats();
+}
+
 function toggleContactSelection(id) {
   if (mState.selectedContactIds.has(id)) {
     mState.selectedContactIds.delete(id);
   } else {
     mState.selectedContactIds.add(id);
   }
-  renderMobileContactsList();
+  
+  const card = document.querySelector(`.m-contact-card[data-id="${id}"]`);
+  if (card) {
+    const isSelected = mState.selectedContactIds.has(id);
+    card.classList.toggle('selected', isSelected);
+    const cb = card.querySelector('input[type="checkbox"]');
+    if (cb) cb.checked = isSelected;
+  }
   updateMobileHeaderStats();
 }
 
@@ -397,22 +429,7 @@ function populateMobileComunas() {
   select.innerHTML = '<option value="all">Todas las Comunas</option>' + comunas.map(com => `<option value="${com}">${com}</option>`).join('');
 }
 
-function updateMobileHeaderStats() {
-  const total = mState.contacts.length;
-  const emails = mState.contacts.filter(c => c.tieneEmail).length;
-  const wa = mState.contacts.filter(c => c.tieneWhatsApp).length;
-
-  const totalEl = document.getElementById('m-stat-total');
-  const emailEl = document.getElementById('m-stat-email');
-  const waEl = document.getElementById('m-stat-wa');
-
-  if (totalEl) totalEl.textContent = total;
-  if (emailEl) emailEl.textContent = emails;
-  if (waEl) waEl.textContent = wa;
-
-  const targetEl = document.getElementById('m-email-target-badge');
-  if (targetEl) targetEl.textContent = `${mState.selectedContactIds.size} seleccionados`;
-}
+// (updateMobileHeaderStats unificado al inicio de la sección)
 
 // ================= TEST EMAIL =================
 async function sendMobileTestEmail() {
@@ -521,67 +538,94 @@ function closeMobileAddClientSheet() {
 }
 
 async function saveMobileNewClient(e) {
-  e.preventDefault();
+  if (e && typeof e.preventDefault === 'function') e.preventDefault();
   const farmacia = document.getElementById('m-new-farmacia')?.value.trim();
   const contacto = document.getElementById('m-new-contacto')?.value.trim();
   const correo = document.getElementById('m-new-correo')?.value.trim();
   const telefono = document.getElementById('m-new-telefono')?.value.trim();
   const comuna = document.getElementById('m-new-comuna')?.value.trim() || 'Santiago';
+  const tipo = document.getElementById('m-new-tipo')?.value || 'farmacia';
 
   if (!farmacia && !contacto) {
-    alert('Ingresa el nombre de la farmacia o contacto.');
+    alert('Por favor ingresa al menos el Nombre del Cliente / Farmacia o Persona de Contacto.');
     return;
   }
 
-  const payload = { nombreFarmacia: farmacia, contacto, correo, telefono, comuna };
-  try {
-    await mApi('/api/contacts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-  } catch (err) {}
+  const saveBtn = document.getElementById('m-btn-save-client');
+  const originalBtnHtml = saveBtn ? saveBtn.innerHTML : 'Guardar Cliente';
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+  }
 
-  const cleanWa = telefono ? telefono.replace(/\D/g, '') : '';
+  const cleanDigits = telefono ? telefono.replace(/\D/g, '') : '';
+  const cleanWa = cleanDigits.startsWith('56') ? cleanDigits : (cleanDigits ? '56' + cleanDigits : '');
+  const isTaller = tipo === 'taller' || 
+                   farmacia.toLowerCase().includes('taller') || 
+                   farmacia.toLowerCase().includes('mechlook');
+
   const newContact = {
-    id: 'm_' + Date.now(),
-    nombreFarmacia: farmacia || 'Farmacia',
+    id: 'cli_custom_' + Date.now(),
+    nombreFarmacia: farmacia || 'Cliente Especial',
     contacto: contacto || 'Encargado/a',
-    correo,
-    telefonoOriginal: telefono,
-    telefonoDisplay: telefono,
-    whatsAppNumero: cleanWa.startsWith('56') ? cleanWa : (cleanWa ? '56' + cleanWa : ''),
-    tieneWhatsApp: Boolean(telefono && telefono.length >= 8),
-    tieneEmail: Boolean(correo && correo.includes('@')),
-    comuna,
+    correo: correo || '',
+    telefonoOriginal: telefono || '',
+    telefonoDisplay: telefono || (cleanWa ? '+' + cleanWa : ''),
+    whatsAppNumero: cleanWa,
+    tieneWhatsApp: Boolean(cleanDigits && cleanDigits.length >= 8),
+    tieneEmail: Boolean(correo && correo.includes('@') && correo.includes('.')),
+    comuna: comuna || 'Santiago',
+    claseComercio: isTaller ? 'Taller' : 'Farmacia',
     isCustom: true,
     createdAt: new Date().toISOString()
   };
 
-  // Sincronizar en Cloud Firestore (disponible para el Administrador web y todos los dispositivos)
+  // 1. Sincronizar en Cloud Firestore (disponible para el Administrador web y la app móvil)
   try {
     if (window.firebase && typeof window.firebase.firestore === 'function') {
       const db = window.firebase.firestore();
-      await db.collection('custom_clients').doc(newContact.id).set(newContact);
-      console.log('✓ Nuevo cliente sincronizado en Firestore desde APK');
+      await db.collection('custom_clients').doc(newContact.id).set(newContact, { merge: true });
+      console.log('✓ Nuevo cliente sincronizado en Firestore custom_clients');
     }
-  } catch (e) {
-    console.warn('Error al sincronizar en Firestore:', e.message);
+  } catch (err) {
+    console.warn('Advertencia Firestore:', err.message);
   }
 
-  const stored = JSON.parse(localStorage.getItem('mkt_custom_clients') || '[]');
-  stored.unshift(newContact);
-  localStorage.setItem('mkt_custom_clients', JSON.stringify(stored));
+  // 2. Respaldo local inmediato en localStorage
+  try {
+    const stored = JSON.parse(localStorage.getItem('mkt_custom_clients') || '[]');
+    stored.unshift(newContact);
+    localStorage.setItem('mkt_custom_clients', JSON.stringify(stored));
+  } catch (err) {}
 
+  // 3. Notificar API backend opcionalmente sin bloquear la interfaz
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
+    fetch(getApiEndpoint('/api/contacts'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newContact),
+      signal: controller.signal
+    }).catch(() => {}).finally(() => clearTimeout(timer));
+  } catch (err) {}
+
+  // 4. Agregar a la lista activa en memoria y seleccionar
   mState.contacts.unshift(newContact);
   mState.filteredContacts.unshift(newContact);
   mState.selectedContactIds.add(newContact.id);
 
   renderMobileContactsList();
+  populateMobileComunas();
   updateMobileHeaderStats();
+
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = originalBtnHtml;
+  }
   document.getElementById('m-form-new-client')?.reset();
   closeMobileAddClientSheet();
-  alert(`¡Cliente "${farmacia || contacto}" agregado con éxito y sincronizado!`);
+  alert(`✓ ¡Cliente "${farmacia || contacto}" agregado con éxito y disponible en la lista!`);
 }
 
 // ================= WHATSAPP DISPATCHER =================
