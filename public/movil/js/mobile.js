@@ -791,6 +791,14 @@ async function startMobileMassEmailCampaign() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         targetContactIds: selectedWithEmail.map(c => c.id),
+        targetContacts: selectedWithEmail.map(c => ({
+          id: c.id,
+          nombreFarmacia: c.nombreFarmacia || 'Farmacia',
+          contacto: c.contacto || 'Estimado/a',
+          correo: c.correo,
+          comuna: c.comuna || 'Santiago',
+          tieneEmail: true
+        })),
         subject,
         title: subject,
         body,
