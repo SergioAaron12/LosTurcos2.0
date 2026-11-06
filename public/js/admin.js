@@ -1010,8 +1010,8 @@ function renderAdminProducts() {
       </div>
       <div class="flex-1">
         <div class="font-bold">${p.name}</div>
-        <div>Stock: ${stockStatus}</div>
-        <div>Precio: $${p.price.toLocaleString('es-CL')}</div>
+        <div>Stock: ${stockStatus} embalajes</div>
+        <div>Precio: $${p.price.toLocaleString('es-CL')} / embalaje (24 unid.)</div>
         <div>Categorías: ${getProductCategoryNames(p).join(' | ')}</div>
         <div>Catálogos: ${getAllProductCatalogLabels(p).join(' | ') || 'Sin catálogos específicos'}</div>
         <div>Descuento: ${p.discount || 0}%</div>

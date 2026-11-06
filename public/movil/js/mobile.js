@@ -153,27 +153,108 @@ function getProductImage(p) {
 }
 
 async function loadMobileProducts() {
-  const fallbackProducts = [
-    { id: 'corega_max_bloqueo', name: 'Corega Max Bloqueo 70g', normalPrice: 8990, offerPrice: 7290, stock: 120, image: 'img/products/corega_maximo_sellado_70g.jpg' },
-    { id: 'corega_max_fijacion', name: 'Corega Max Fijación + Confort 70g', normalPrice: 8990, offerPrice: 7290, stock: 120, image: 'img/products/corega_maximo_menta_70g.jpg' },
-    { id: 'corega_sin_sabor', name: 'Corega Ultra Crema Sin Sabor 70g', normalPrice: 8490, offerPrice: 6890, stock: 150, image: 'img/products/corega_sin_sabor_70g.jpg' },
-    { id: 'corega_sabor_menta', name: 'Corega Ultra Crema Sabor Menta 70g', normalPrice: 8490, offerPrice: 6890, stock: 150, image: 'img/products/corega_menta_70g.jpg' }
-  ];
-
   try {
-    const data = await mApi('/api/products');
-    if (data.success && Array.isArray(data.products) && data.products.length > 0) {
-      mState.products = data.products;
-    } else {
-      mState.products = fallbackProducts;
+    if (window.firebase && typeof window.firebase.firestore === 'function') {
+      const db = window.firebase.firestore();
+      db.collection('products').onSnapshot(snapshot => {
+        if (!snapshot.empty) {
+          mState.products = snapshot.docs.map(doc => {
+            const data = doc.data() || {};
+            const rawPrice = Number(data.price || data.normalPrice || data.unitPrice || data.packagePrice) || 0;
+            const discount = Number(data.discount) || 0;
+
+            let unitPrice = 0;
+            let packagePrice = 0;
+
+            if (data.unitPrice && data.packagePrice) {
+              unitPrice = Number(data.unitPrice);
+              packagePrice = Number(data.packagePrice);
+            } else if (data.unitPrice) {
+              unitPrice = Number(data.unitPrice);
+              packagePrice = Math.round(unitPrice * 24);
+            } else if (data.packagePrice) {
+              packagePrice = Number(data.packagePrice);
+              unitPrice = Math.round(packagePrice / 24);
+            } else if (rawPrice >= 50000) {
+              packagePrice = rawPrice;
+              unitPrice = Math.round(packagePrice / 24);
+            } else {
+              unitPrice = rawPrice;
+              packagePrice = Math.round(unitPrice * 24);
+            }
+
+            const discountedUnitPrice = discount > 0 ? Math.round(unitPrice * (1 - discount / 100)) : unitPrice;
+            const discountedPackagePrice = discount > 0 ? Math.round(packagePrice * (1 - discount / 100)) : packagePrice;
+
+            return {
+              id: `fb_${doc.id}`,
+              firestoreId: doc.id,
+              name: data.name || 'Producto',
+              unitPrice,
+              packagePrice,
+              discountedUnitPrice,
+              discountedPackagePrice,
+              normalPrice: packagePrice,
+              offerPrice: discountedPackagePrice,
+              discount,
+              stock: data.stock !== undefined ? data.stock : 100,
+              image: data.img || data.image || getProductImage({ id: doc.id }),
+              details: data.details || '',
+              category: data.category || 'General',
+              url: data.url || 'https://distribuidoralarutadeloriente.cl'
+            };
+          });
+          mState.selectedProductIds = new Set(mState.products.map(p => p.id));
+          renderMobileProductsPicker();
+          renderMobileCatalog();
+          updateMobileWhatsAppTemplate();
+        }
+      }, err => {
+        console.warn('Snapshot productos en móvil:', err);
+      });
+      return;
     }
-  } catch (e) {
-    mState.products = fallbackProducts;
+  } catch (err) {
+    console.warn('Error loadMobileProducts Firebase:', err);
   }
 
+  const fallbackProducts = [
+    { id: 'corega_sin_sabor', name: 'Adhesivo Dental Corega Ultra Crema Sin Sabor 70g', unitPrice: 7875, packagePrice: 189000, discountedUnitPrice: 7875, discountedPackagePrice: 189000, normalPrice: 189000, offerPrice: 189000, discount: 0, stock: 100, image: 'img/products/corega_sin_sabor_70g.jpg' },
+    { id: 'corega_sabor_menta', name: 'Ultra Crema Adhesiva Sabor Menta 70G', unitPrice: 8150, packagePrice: 195600, discountedUnitPrice: 8150, discountedPackagePrice: 195600, normalPrice: 195600, offerPrice: 195600, discount: 0, stock: 100, image: 'img/products/corega_menta_70g.jpg' },
+    { id: 'corega_max_sellado', name: 'Crema Adhesiva Ultra Corega Maximo Sellado 70g', unitPrice: 8999, packagePrice: 215976, discountedUnitPrice: 8999, discountedPackagePrice: 215976, normalPrice: 215976, offerPrice: 215976, discount: 0, stock: 100, image: 'img/products/corega_maximo_sellado_70g.jpg' },
+    { id: 'corega_max_menta', name: 'Corega Ultra 70g Máximo Sellado Sabor Menta', unitPrice: 8999, packagePrice: 215976, discountedUnitPrice: 8999, discountedPackagePrice: 215976, normalPrice: 215976, offerPrice: 215976, discount: 0, stock: 100, image: 'img/products/corega_maximo_menta_70g.jpg' }
+  ];
+
+  mState.products = fallbackProducts;
   mState.selectedProductIds = new Set(mState.products.map(p => p.id));
   renderMobileProductsPicker();
   renderMobileCatalog();
+  updateMobileWhatsAppTemplate();
+}
+
+function updateMobileWhatsAppTemplate() {
+  const textarea = document.getElementById('m-wa-template');
+  if (!textarea) return;
+
+  const prods = mState.products.filter(p => mState.selectedProductIds.has(p.id));
+  let prodLines = '';
+  if (prods.length > 0) {
+    prodLines = prods.map(p => {
+      const uPrice = (p.discountedUnitPrice || p.unitPrice || 0).toLocaleString('es-CL');
+      const pkgPrice = (p.discountedPackagePrice || p.packagePrice || p.offerPrice || 0).toLocaleString('es-CL');
+      return `🔹 *${p.name}*: $${uPrice} c/u ($${pkgPrice} / embalaje 24 unid.)`;
+    }).join('\n');
+  } else {
+    prodLines = '🔹 Productos con venta por embalaje cerrado (24 unid. c/u).';
+  }
+
+  textarea.value = `Hola *{contacto}*, gusto en saludarte! 👋
+Le escribimos de *Distribuidora La Ruta del Oriente* para *{farmacia}*.
+
+Tenemos stock inmediato con venta por embalaje cerrado (24 unid. c/u - Mínimo 3 embalajes):
+${prodLines}
+
+¿Cuántos embalajes desea que le reservemos para despacho?`;
 }
 
 function renderMobileProductsPicker() {
@@ -182,7 +263,8 @@ function renderMobileProductsPicker() {
 
   container.innerHTML = mState.products.map(p => {
     const isSelected = mState.selectedProductIds.has(p.id);
-    const priceFmt = (p.offerPrice || p.normalPrice || 0).toLocaleString('es-CL');
+    const uPrice = (p.discountedUnitPrice || p.unitPrice || 0).toLocaleString('es-CL');
+    const pkgPrice = (p.discountedPackagePrice || p.packagePrice || p.offerPrice || 0).toLocaleString('es-CL');
     const imgSrc = getProductImage(p);
     return `
       <div class="m-prod-chip ${isSelected ? 'selected' : ''}" onclick="toggleMobileProd('${p.id}')">
@@ -190,7 +272,7 @@ function renderMobileProductsPicker() {
           <img src="${imgSrc}" alt="${p.name}" onerror="this.onerror=null; this.src='https://distribuidoralarutadeloriente.cl/' + '${imgSrc}';">
         </div>
         <div class="m-prod-chip-name">${p.name}</div>
-        <div class="m-prod-chip-price">$${priceFmt}</div>
+        <div class="m-prod-chip-price">$${uPrice} <span style="font-size: 9px; font-weight: normal; opacity: 0.8;">c/u (Emb. $${pkgPrice})</span></div>
         <div class="m-prod-chip-toggle">
           <i class="fa-solid ${isSelected ? 'fa-check' : 'fa-plus'}"></i>
           <span>${isSelected ? 'Incluido' : 'Agregar'}</span>
@@ -207,6 +289,7 @@ function toggleMobileProd(id) {
     mState.selectedProductIds.add(id);
   }
   renderMobileProductsPicker();
+  updateMobileWhatsAppTemplate();
 }
 
 function renderMobileCatalog() {
@@ -214,7 +297,8 @@ function renderMobileCatalog() {
   if (!container) return;
 
   container.innerHTML = mState.products.map(p => {
-    const priceFmt = (p.offerPrice || p.normalPrice || 0).toLocaleString('es-CL');
+    const uPrice = (p.discountedUnitPrice || p.unitPrice || 0).toLocaleString('es-CL');
+    const pkgPrice = (p.discountedPackagePrice || p.packagePrice || p.offerPrice || 0).toLocaleString('es-CL');
     const imgSrc = getProductImage(p);
     return `
       <div class="m-card" style="display: flex; gap: 14px; align-items: center; border: 1px solid rgba(244,197,66,0.25); background: #13151b; border-radius: 14px; padding: 12px; margin-bottom: 10px;">
@@ -223,8 +307,13 @@ function renderMobileCatalog() {
         </div>
         <div style="flex: 1; min-width: 0;">
           <h4 style="font-size: 13px; font-weight: 800; color: #fff; margin-bottom: 3px; line-height: 1.3;">${p.name}</h4>
-          <div style="font-size: 16px; font-weight: 800; color: #f4c542; margin: 3px 0;">$${priceFmt}</div>
-          <div style="font-size: 11px; color: #4ade80; font-weight: 600;">🟢 Stock: ${p.stock || 100} un.</div>
+          <div style="font-size: 16px; font-weight: 800; color: #f4c542; margin: 3px 0;">
+            $${uPrice} <span style="font-size: 11px; font-weight: normal; color: #cbd5e1;">c/u</span>
+          </div>
+          <div style="font-size: 11px; color: #94a3b8; font-weight: 600; margin-bottom: 3px;">
+            📦 Embalaje (24 unid.): <strong style="color: #fff;">$${pkgPrice}</strong>
+          </div>
+          <div style="font-size: 11px; color: #4ade80; font-weight: 600;">🟢 Stock: ${p.stock || 100} embalajes</div>
         </div>
       </div>
     `;
@@ -611,15 +700,17 @@ function openMobilePreviewSheet() {
   const prods = mState.products.filter(p => mState.selectedProductIds.has(p.id));
 
   const prodCardsHtml = prods.map(p => {
-    const priceFmt = (p.offerPrice || p.normalPrice || 0).toLocaleString('es-CL');
+    const uPrice = (p.discountedUnitPrice || p.unitPrice || 0).toLocaleString('es-CL');
+    const pkgPrice = (p.discountedPackagePrice || p.packagePrice || p.offerPrice || 0).toLocaleString('es-CL');
     return `
       <div style="border: 1px solid #f4c542; border-radius: 10px; background: #0f1219; color: #fff; padding: 12px; margin-bottom: 10px; text-align: center;">
         <div style="background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 8px;">
           <img src="${p.image || p.imageUrl || '/asset/corega1.png'}" style="max-height: 80px; max-width: 90%; object-fit: contain;">
         </div>
         <div style="color: #f4c542; font-weight: bold; font-size: 13px;">${p.name}</div>
-        <div style="font-size: 18px; font-weight: 800; color: #f4c542; margin: 4px 0;">$${priceFmt}</div>
-        <div style="font-size: 11px; color: #4ade80;">🟢 Stock disponible (${p.stock || 100} un.)</div>
+        <div style="font-size: 18px; font-weight: 800; color: #f4c542; margin: 4px 0;">$${uPrice} <span style="font-size: 12px; font-weight: normal; color: #cbd5e1;">c/u</span></div>
+        <div style="font-size: 11px; color: #94a3b8; font-weight: 600; margin-bottom: 4px;">📦 Embalaje (24 unid.): <strong style="color: #fff;">$${pkgPrice}</strong></div>
+        <div style="font-size: 11px; color: #4ade80;">🟢 Stock disponible (${p.stock || 100} embalajes)</div>
       </div>
     `;
   }).join('');

@@ -666,8 +666,8 @@ function renderSearchSuggestions() {
   container.innerHTML = matches.map((product, index) => {
     const discountedPrice = getDiscountedUnitPrice(product);
     const priceMarkup = Number(product.discount) > 0
-      ? `<span class="text-xs text-gray-400 line-through mr-2">$${product.price.toLocaleString('es-CL')}</span><span class="font-semibold text-turquoise-jewel">$${discountedPrice.toLocaleString('es-CL')}</span>`
-      : `<span class="font-semibold text-turquoise-jewel">$${product.price.toLocaleString('es-CL')}</span>`;
+      ? `<span class="text-xs text-gray-400 line-through mr-1">$${product.price.toLocaleString('es-CL')}</span><span class="font-semibold text-turquoise-jewel">$${discountedPrice.toLocaleString('es-CL')}</span> <span class="text-[10px] text-gray-500">/emb.(24u)</span>`
+      : `<span class="font-semibold text-turquoise-jewel">$${product.price.toLocaleString('es-CL')}</span> <span class="text-[10px] text-gray-500">/emb.(24u)</span>`;
 
     return `<button type="button" class="search-suggestion-item w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition border-b border-gray-100 last:border-b-0" data-index="${index}" data-product-id="${product.id}"><img src="${product.img}" alt="${product.name}" class="w-12 h-12 rounded-lg object-cover bg-gray-50" /><span class="flex-1 min-w-0"><span class="block text-sm font-semibold text-dark-royal truncate">${product.name}</span><span class="block text-xs text-gray-500 truncate">${getProductCategoryLabel(product)}</span></span><span class="text-sm whitespace-nowrap">${priceMarkup}</span></button>`;
   }).join('');
@@ -1298,7 +1298,9 @@ function ensureCartModal() {
       <button onclick="toggleCart()" class="cart-modal-close" aria-label="Cerrar carrito"><i class="fa fa-times"></i></button>
       <div class="p-6 border-b cart-modal-header">
         <h2 class="text-xl font-bold">Carrito de Compras</h2>
+        <p class="text-xs text-amber-600 mt-1 font-medium"><i class="fa-solid fa-box-open mr-1"></i> Ventas por embalaje (24 unid.) · Mínimo 3 embalajes</p>
       </div>
+      <div id="cart-min-notice" class="px-6 pt-4 pb-0 hidden"></div>
       <div id="cart-items" class="p-6 max-h-[55vh] overflow-y-auto cart-modal-items"></div>
       <div class="p-6 bg-gray-50 border-t space-y-3 cart-modal-summary">
         <div class="flex items-center justify-between text-sm text-gray-600">
@@ -1326,19 +1328,72 @@ function ensureCartModal() {
   return modal;
 }
 
-function getProductPriceMarkup(product) {
-  const hasDiscount = Number(product.discount) > 0;
-  if (!hasDiscount) {
-    return `<span class="font-bold text-turquoise-jewel">$${product.price.toLocaleString('es-CL')}</span>`;
+function getProductPrices(product) {
+  const UNITS_PER_PACKAGE = 24;
+  const rawPrice = Number(product?.price) || 0;
+  const discount = Number(product?.discount) || 0;
+
+  let unitPrice = 0;
+  let packagePrice = 0;
+
+  if (product?.unitPrice && product?.packagePrice) {
+    unitPrice = Number(product.unitPrice);
+    packagePrice = Number(product.packagePrice);
+  } else if (rawPrice >= 50000) {
+    packagePrice = rawPrice;
+    unitPrice = Math.round(rawPrice / UNITS_PER_PACKAGE);
+  } else {
+    unitPrice = rawPrice;
+    packagePrice = Math.round(rawPrice * UNITS_PER_PACKAGE);
   }
 
-  const finalPrice = getDiscountedUnitPrice(product);
-  return `<span class="line-through text-gray-400 mr-2">$${product.price.toLocaleString('es-CL')}</span><span class="font-bold text-turquoise-jewel">$${finalPrice.toLocaleString('es-CL')}</span>`;
+  const discountedUnitPrice = discount > 0 ? Math.round(unitPrice * (1 - discount / 100)) : unitPrice;
+  const discountedPackagePrice = discount > 0 ? Math.round(packagePrice * (1 - discount / 100)) : packagePrice;
+
+  return {
+    unitsPerPackage: UNITS_PER_PACKAGE,
+    unitPrice,
+    discountedUnitPrice,
+    packagePrice,
+    discountedPackagePrice,
+    hasDiscount: discount > 0,
+    discount
+  };
+}
+
+function getProductPriceMarkup(product) {
+  const p = getProductPrices(product);
+  if (!p.hasDiscount) {
+    return `
+      <div class="flex flex-col">
+        <div class="flex items-baseline gap-1">
+          <span class="font-bold text-turquoise-jewel">$${p.unitPrice.toLocaleString('es-CL')}</span>
+          <span class="text-xs font-semibold text-gold-lux/90">c/u</span>
+        </div>
+        <div class="text-[11px] text-gray-400 font-normal mt-0.5">
+          <i class="fa-solid fa-box-open text-gold-lux mr-1"></i>Embalaje 24 unid.: <span class="text-white font-medium">$${p.packagePrice.toLocaleString('es-CL')}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="flex flex-col">
+      <div class="flex items-baseline gap-1.5">
+        <span class="line-through text-gray-400 text-xs">$${p.unitPrice.toLocaleString('es-CL')}</span>
+        <span class="font-bold text-turquoise-jewel">$${p.discountedUnitPrice.toLocaleString('es-CL')}</span>
+        <span class="text-xs font-semibold text-gold-lux/90">c/u</span>
+      </div>
+      <div class="text-[11px] text-gray-400 font-normal mt-0.5">
+        <i class="fa-solid fa-box-open text-gold-lux mr-1"></i>Embalaje 24 unid.: <span class="text-white font-medium">$${p.discountedPackagePrice.toLocaleString('es-CL')}</span>
+      </div>
+    </div>
+  `;
 }
 
 function getDiscountedUnitPrice(product) {
-  const discount = Number(product.discount) || 0;
-  return discount > 0 ? Math.round(product.price * (1 - discount / 100)) : product.price;
+  const p = getProductPrices(product);
+  return p.discountedPackagePrice;
 }
 
 function getCartSummary() {
@@ -1346,12 +1401,13 @@ function getCartSummary() {
     const product = products.find(p => p.id === item.id);
     if (!product) return acc;
 
-    const baseLineTotal = product.price * item.qty;
-    const finalLineTotal = getDiscountedUnitPrice(product) * item.qty;
+    const p = getProductPrices(product);
+    const baseLineTotal = p.packagePrice * item.qty;
+    const finalLineTotal = p.discountedPackagePrice * item.qty;
 
     acc.subtotal += baseLineTotal;
     acc.total += finalLineTotal;
-    acc.discount += baseLineTotal - finalLineTotal;
+    acc.discount += (baseLineTotal - finalLineTotal);
 
     return acc;
   }, { subtotal: 0, discount: 0, total: 0 });
@@ -1547,7 +1603,7 @@ function renderProducts(containerId, listOrOnlyDiscount = false) {
       const id = parseInt(this.getAttribute('data-id'));
       const added = addToCart(id, 1);
       if (added) {
-        showSuccessToast('Agregado con éxito');
+        showSuccessToast('1 embalaje (24 unid.) agregado');
       }
     });
   });
@@ -1596,6 +1652,10 @@ function showProductDetailModal(id) {
     </div>
   ` : '';
 
+  const prices = getProductPrices(product);
+  const initialQty = stock >= 3 ? 3 : (stock > 0 ? stock : 0);
+  const initialTotal = prices.discountedPackagePrice * initialQty;
+
   content.innerHTML = `
       <div class="product-detail-layout flex flex-col md:flex-row gap-4 md:gap-8 items-start md:h-full md:max-h-[calc(90vh-3.5rem)] overflow-visible md:overflow-hidden">
         <div class="product-detail-media flex flex-col items-center text-center w-full md:w-[240px] md:flex-shrink-0">
@@ -1606,16 +1666,39 @@ function showProductDetailModal(id) {
         </div>
         <div class="product-detail-main flex flex-col min-w-0 flex-1 w-full md:h-full md:overflow-hidden">
             ${scrollHint}
-            <div class="product-detail-title text-base md:text-xl font-bold mb-1 md:mb-2 leading-tight text-center md:text-left pr-8">${product.name}</div>
-            <div class="product-detail-price text-sm md:text-base mb-1 md:mb-2 text-center md:text-left">Precio habitual: ${getProductPriceMarkup(product)}</div>
-            <div class="product-detail-stock text-xs md:text-sm ${isOutOfStock ? 'text-red-400' : ''} mb-2 md:mb-4 text-center md:text-left">${isOutOfStock ? '<span class="font-semibold">Producto agotado</span>' : `Stock disponible: <span class="font-semibold text-gold-lux">${stock}</span>`}</div>
-            <div class="product-detail-qty mb-2 md:mb-4 flex flex-col items-center md:items-start gap-1 md:gap-2">
-              <label class="text-xs md:text-sm">Cantidad</label>
-              <div class="product-detail-stepper flex items-center px-2 md:px-3 py-1.5 md:py-2" style="width: 124px;">
-                <button type="button" id="btn-restar" class="text-lg md:text-xl px-2.5 md:px-3" tabindex="-1" ${isOutOfStock ? 'disabled' : ''}>−</button>
-                <input id="modal-cantidad" type="number" min="1" max="${stock}" value="${stock > 0 ? 1 : 0}" class="w-10 md:w-11 px-1 py-0.5 border-0 bg-transparent text-center text-base md:text-lg font-bold outline-none" readonly />
-                <button type="button" id="btn-sumar" class="text-lg md:text-xl px-2.5 md:px-3" tabindex="-1" ${isOutOfStock ? 'disabled' : ''}>+</button>
+            <div class="product-detail-title text-base md:text-xl font-bold mb-2 leading-tight text-center md:text-left pr-8">${product.name}</div>
+
+            <!-- Cuadro destacado con el Valor por Embalaje y Precio Unitario -->
+            <div class="rounded-2xl border border-gold-lux/40 bg-gradient-to-r from-gold-lux/15 to-transparent p-3.5 mb-3 text-left">
+              <div class="flex items-center justify-between text-xs md:text-sm text-gray-300">
+                <span>Precio unitario (cada una):</span>
+                <span class="font-bold text-white text-sm md:text-base">$${prices.discountedUnitPrice.toLocaleString('es-CL')} <span class="text-xs text-gold-lux font-normal">c/u</span></span>
               </div>
+              <div class="flex items-center justify-between text-sm md:text-base mt-2 pt-2 border-t border-gold-lux/25">
+                <div>
+                  <div class="font-bold text-gold-lux text-sm md:text-base">Valor por embalaje (24 unid.):</div>
+                  <div class="text-[11px] text-gray-400">24 unidades x $${prices.discountedUnitPrice.toLocaleString('es-CL')}</div>
+                </div>
+                <div class="text-right">
+                  <div class="font-extrabold text-turquoise-jewel text-xl md:text-2xl">$${prices.discountedPackagePrice.toLocaleString('es-CL')}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="product-detail-stock text-xs md:text-sm ${isOutOfStock ? 'text-red-400' : ''} mb-2 md:mb-3 text-center md:text-left">${isOutOfStock ? '<span class="font-semibold">Producto agotado</span>' : `Stock disponible: <span class="font-semibold text-gold-lux">${stock} embalajes</span> (${stock * 24} unidades)`}</div>
+            <div class="product-detail-qty mb-2 md:mb-3 flex flex-col items-center md:items-start gap-1">
+              <label class="text-xs md:text-sm font-semibold">Cantidad de embalajes (24 unid. c/u)</label>
+              <div class="flex items-center gap-3">
+                <div class="product-detail-stepper flex items-center px-2 md:px-3 py-1.5 md:py-2" style="width: 124px;">
+                  <button type="button" id="btn-restar" class="text-lg md:text-xl px-2.5 md:px-3" tabindex="-1" ${isOutOfStock ? 'disabled' : ''}>−</button>
+                  <input id="modal-cantidad" type="number" min="1" max="${stock}" value="${initialQty}" class="w-10 md:w-11 px-1 py-0.5 border-0 bg-transparent text-center text-base md:text-lg font-bold outline-none" readonly />
+                  <button type="button" id="btn-sumar" class="text-lg md:text-xl px-2.5 md:px-3" tabindex="-1" ${isOutOfStock ? 'disabled' : ''}>+</button>
+                </div>
+                <div class="text-xs text-gray-300">
+                  Total estimado: <strong id="modal-total-display" class="text-gold-lux font-bold text-sm md:text-base">$${initialTotal.toLocaleString('es-CL')}</strong>
+                </div>
+              </div>
+              <div class="text-[11px] text-amber-300 mt-0.5"><i class="fa-solid fa-box-open mr-1"></i> Mínimo de compra en la tienda: 3 embalajes</div>
               <div id="stock-msg" class="text-xs text-red-400 mt-1" style="display:none"></div>
             </div>
             <div class="product-detail-label text-xs md:text-sm mb-1 md:mb-2 text-center md:text-left">Descripción:</div>
@@ -1634,11 +1717,21 @@ function showProductDetailModal(id) {
     const btnSumar = document.getElementById('btn-sumar');
     const btnRestar = document.getElementById('btn-restar');
     const stockMsg = document.getElementById('stock-msg');
+    const totalDisplay = document.getElementById('modal-total-display');
     if (!input || !btnSumar || !btnRestar || !stockMsg) return;
+
+    function refreshTotal(val) {
+      if (totalDisplay) {
+        totalDisplay.textContent = '$' + (prices.discountedPackagePrice * val).toLocaleString('es-CL');
+      }
+    }
+
     btnSumar.onclick = () => {
       let val = parseInt(input.value);
       if (val < stock) {
-        input.value = val + 1;
+        val = val + 1;
+        input.value = val;
+        refreshTotal(val);
         stockMsg.style.display = 'none';
       } else {
         stockMsg.textContent = 'No hay más stock disponible.';
@@ -1648,7 +1741,9 @@ function showProductDetailModal(id) {
     btnRestar.onclick = () => {
       let val = parseInt(input.value);
       if (val > 1) {
-        input.value = val - 1;
+        val = val - 1;
+        input.value = val;
+        refreshTotal(val);
         stockMsg.style.display = 'none';
       }
     };
@@ -1673,7 +1768,7 @@ function addModalToCart(productId, openCart = false) {
   if (!added) return;
 
   closeProductModal();
-  showSuccessToast('Agregado con éxito');
+  showSuccessToast(`${cantidad} ${cantidad === 1 ? 'embalaje' : 'embalajes'} agregado(s) con éxito`);
   if (openCart) {
     toggleCart();
   }
@@ -1731,7 +1826,36 @@ function renderCart() {
   const cartTotalElement = document.getElementById('cart-total');
   const cartDiscountElement = document.getElementById('cart-discount');
   const cartSubtotalElement = document.getElementById('cart-subtotal');
+  const minNoticeElement = document.getElementById('cart-min-notice');
   if (!cartItemsContainer) return;
+
+  const totalEmbalajes = cart.reduce((acc, item) => acc + (item.qty || 0), 0);
+  const meetsMin = totalEmbalajes >= 3;
+
+  if (minNoticeElement) {
+    if (cart.length === 0) {
+      minNoticeElement.classList.add('hidden');
+      minNoticeElement.innerHTML = '';
+    } else {
+      minNoticeElement.classList.remove('hidden');
+      if (meetsMin) {
+        minNoticeElement.innerHTML = `
+          <div class="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between">
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-emerald-600"></i> ¡Mínimo de compra cumplido!</span>
+            <span class="font-bold bg-emerald-100 px-2 py-0.5 rounded text-emerald-700">${totalEmbalajes} embalajes (24 unid. c/u)</span>
+          </div>
+        `;
+      } else {
+        const missing = 3 - totalEmbalajes;
+        minNoticeElement.innerHTML = `
+          <div class="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center justify-between">
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-amber-600"></i> Mínimo: 3 embalajes (te faltan ${missing})</span>
+            <span class="font-bold bg-amber-100 px-2 py-0.5 rounded text-amber-700">${totalEmbalajes} de 3</span>
+          </div>
+        `;
+      }
+    }
+  }
 
   let html = '';
   if (cart.length === 0) {
@@ -1740,10 +1864,11 @@ function renderCart() {
     html = '<ul>' + cart.map(item => {
       const prod = products.find(p => p.id === item.id);
       if (!prod) return '';
-      const baseLineTotal = prod.price * item.qty;
-      const finalLineTotal = getDiscountedUnitPrice(prod) * item.qty;
-      const hasDiscount = Number(prod.discount) > 0;
-      return `<li class="flex items-center gap-3 py-3 border-b border-gold-lux/20"><div class="w-14 h-14 bg-white rounded-lg p-1 flex items-center justify-center flex-shrink-0 border border-gold-lux/30"><img src="${prod.img}" class="max-w-full max-h-full object-contain" alt="${prod.name}"/></div><div class="flex-1 min-w-0"><div class="font-medium text-white leading-tight">${prod.name}</div><div class="text-xs text-gray-400 mt-0.5">Cantidad: ${item.qty}${hasDiscount ? ` · Descuento: ${prod.discount}%` : ''}</div><div class="text-sm mt-1">${hasDiscount ? `<span class="line-through text-gray-500 mr-2">$${baseLineTotal.toLocaleString('es-CL')}</span>` : ''}<span class="font-bold text-gold-lux">$${finalLineTotal.toLocaleString('es-CL')}</span></div></div><button onclick="removeFromCart(${item.id})" class="ml-1 text-red-400 hover:text-red-300 p-1" aria-label="Eliminar ${prod.name}"><i class="fa fa-trash"></i></button></li>`;
+      const p = getProductPrices(prod);
+      const baseLineTotal = p.packagePrice * item.qty;
+      const finalLineTotal = p.discountedPackagePrice * item.qty;
+      const hasDiscount = p.hasDiscount;
+      return `<li class="flex items-center gap-3 py-3 border-b border-gold-lux/20"><div class="w-14 h-14 bg-white rounded-lg p-1 flex items-center justify-center flex-shrink-0 border border-gold-lux/30"><img src="${prod.img}" class="max-w-full max-h-full object-contain" alt="${prod.name}"/></div><div class="flex-1 min-w-0"><div class="font-medium text-white leading-tight">${prod.name}</div><div class="text-xs text-gray-300 mt-0.5">${item.qty} ${item.qty === 1 ? 'embalaje' : 'embalajes'} (24 unid. c/u) · <span class="text-gold-lux">$${p.discountedUnitPrice.toLocaleString('es-CL')} c/u</span>${hasDiscount ? ` · ${p.discount}% desc.` : ''}</div><div class="text-sm mt-1">${hasDiscount ? `<span class="line-through text-gray-500 mr-2">$${baseLineTotal.toLocaleString('es-CL')}</span>` : ''}<span class="font-bold text-gold-lux">$${finalLineTotal.toLocaleString('es-CL')}</span></div></div><button onclick="removeFromCart(${item.id})" class="ml-1 text-red-400 hover:text-red-300 p-1" aria-label="Eliminar ${prod.name}"><i class="fa fa-trash"></i></button></li>`;
     }).join('') + '</ul>';
   }
 
@@ -1778,19 +1903,28 @@ function requestQuoteOnWhatsApp() {
     return;
   }
 
+  const totalEmbalajes = cart.reduce((acc, item) => acc + (item.qty || 0), 0);
+  if (totalEmbalajes < 3) {
+    showAppToast(`El pedido mínimo es de 3 embalajes de 24 unidades (llevas ${totalEmbalajes} en el carrito).`, 'error');
+    return;
+  }
+
   const summary = getCartSummary();
   const lines = cart.map(item => {
     const product = products.find(p => p.id === item.id);
     if (!product) return null;
-    const lineTotal = getDiscountedUnitPrice(product) * item.qty;
-    return `• ${product.name} x${item.qty}: $${lineTotal.toLocaleString('es-CL')}`;
+    const p = getProductPrices(product);
+    const lineTotal = p.discountedPackagePrice * item.qty;
+    return `• ${product.name} x${item.qty} embalaje(s) (24 unid. c/u) a $${p.discountedUnitPrice.toLocaleString('es-CL')} c/u: $${lineTotal.toLocaleString('es-CL')}`;
   }).filter(Boolean);
 
   const message = [
-    'Hola, quiero solicitar una cotización de estos productos:',
+    'Hola, quiero solicitar una cotización mayorista:',
+    '*Venta por embalaje cerrado (24 unid. por embalaje)*',
     '',
     ...lines,
     '',
+    `Total embalajes: ${totalEmbalajes}`,
     `Subtotal: $${summary.subtotal.toLocaleString('es-CL')}`,
     `Descuento: -$${summary.discount.toLocaleString('es-CL')}`,
     `Total: $${summary.total.toLocaleString('es-CL')}`
@@ -1800,7 +1934,7 @@ function requestQuoteOnWhatsApp() {
   openWhatsAppChat(message);
 }
 
-const WHATSAPP_NUMBER = '56998750387';
+const WHATSAPP_NUMBER = '56962801676';
 const WHATSAPP_NUMBER_2 = '56962801676';
 
 function openWhatsAppChat(message, useSecondary = false) {

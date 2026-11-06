@@ -133,10 +133,42 @@ async function getCheckoutProducts() {
   return checkoutProductsPromise;
 }
 
-function getDiscountedUnitPrice(product) {
-  const price = Number(product?.price) || 0;
+function getProductPrices(product) {
+  const UNITS_PER_PACKAGE = 24;
+  const rawPrice = Number(product?.price) || 0;
   const discount = Number(product?.discount) || 0;
-  return discount > 0 ? Math.round(price * (1 - discount / 100)) : price;
+
+  let unitPrice = 0;
+  let packagePrice = 0;
+
+  if (product?.unitPrice && product?.packagePrice) {
+    unitPrice = Number(product.unitPrice);
+    packagePrice = Number(product.packagePrice);
+  } else if (rawPrice >= 50000) {
+    packagePrice = rawPrice;
+    unitPrice = Math.round(rawPrice / UNITS_PER_PACKAGE);
+  } else {
+    unitPrice = rawPrice;
+    packagePrice = Math.round(rawPrice * UNITS_PER_PACKAGE);
+  }
+
+  const discountedUnitPrice = discount > 0 ? Math.round(unitPrice * (1 - discount / 100)) : unitPrice;
+  const discountedPackagePrice = discount > 0 ? Math.round(packagePrice * (1 - discount / 100)) : packagePrice;
+
+  return {
+    unitsPerPackage: UNITS_PER_PACKAGE,
+    unitPrice,
+    discountedUnitPrice,
+    packagePrice,
+    discountedPackagePrice,
+    hasDiscount: discount > 0,
+    discount
+  };
+}
+
+function getDiscountedUnitPrice(product) {
+  const p = getProductPrices(product);
+  return p.discountedPackagePrice;
 }
 
 function getCheckoutSummary(cart, productsById) {
@@ -144,8 +176,9 @@ function getCheckoutSummary(cart, productsById) {
     const product = productsById.get(String(item.id));
     if (!product) return accumulator;
 
-    const baseLineTotal = (Number(product.price) || 0) * item.qty;
-    const finalLineTotal = getDiscountedUnitPrice(product) * item.qty;
+    const p = getProductPrices(product);
+    const baseLineTotal = p.packagePrice * item.qty;
+    const finalLineTotal = p.discountedPackagePrice * item.qty;
 
     return {
       subtotal: accumulator.subtotal + baseLineTotal,
@@ -218,20 +251,23 @@ async function renderCheckout() {
       return `<div class="rounded-3xl border border-red-100 bg-red-50 px-4 py-4 text-sm text-red-700">Uno de los productos del carrito ya no está disponible. Vuelve al catálogo y revisa el pedido.</div>`;
     }
 
-    const unitPrice = getDiscountedUnitPrice(product);
-    const lineTotal = unitPrice * item.qty;
-    const originalLineTotal = (Number(product.price) || 0) * item.qty;
-    const hasDiscount = Number(product.discount) > 0;
+    const p = getProductPrices(product);
+    const lineTotal = p.discountedPackagePrice * item.qty;
+    const originalLineTotal = p.packagePrice * item.qty;
+    const hasDiscount = p.hasDiscount;
 
     return `
       <article class="flex gap-4 rounded-3xl bg-white px-4 py-4 shadow-sm">
         <img src="${product.img || ''}" alt="${product.name || 'Producto'}" class="h-20 w-20 rounded-2xl object-cover bg-stone-100" />
         <div class="min-w-0 flex-1">
           <h3 class="text-sm font-semibold text-slate-900">${product.name || 'Producto'}</h3>
-          <p class="mt-1 text-xs text-slate-500">Cantidad: ${item.qty}</p>
+          <p class="mt-1 text-xs text-slate-500">
+            Cantidad: ${item.qty} ${item.qty === 1 ? 'embalaje' : 'embalajes'} (24 unid. c/u) · <span class="font-medium text-amber-700">$${p.discountedUnitPrice.toLocaleString('es-CL')} c/u</span>
+          </p>
           <div class="mt-2 text-sm">
             ${hasDiscount ? `<span class="mr-2 text-slate-400 line-through">$${originalLineTotal.toLocaleString('es-CL')}</span>` : ''}
             <span class="font-semibold text-amber-700">$${lineTotal.toLocaleString('es-CL')}</span>
+            <span class="text-xs text-slate-400 ml-1">($${p.discountedPackagePrice.toLocaleString('es-CL')} c/emb.)</span>
           </div>
         </div>
       </article>
@@ -243,14 +279,22 @@ async function renderCheckout() {
   document.getElementById('checkout-discount').textContent = `-$${summary.discount.toLocaleString('es-CL')}`;
   document.getElementById('checkout-total').textContent = `$${summary.total.toLocaleString('es-CL')}`;
 
-  setCheckoutButtonState(catalogState.source === 'missing' || hasMissingProducts);
+  const totalEmbalajes = cart.reduce((acc, item) => acc + (item.qty || 0), 0);
+  const meetsMinimum = totalEmbalajes >= 3;
 
-  if (hasMissingProducts) {
+  if (!meetsMinimum) {
+    const missing = 3 - totalEmbalajes;
+    setCheckoutCatalogNotice(`El pedido mínimo en la tienda es de 3 embalajes de 24 unidades. Actualmente tienes ${totalEmbalajes} embalaje(s). Te faltan ${missing} embalaje(s) para poder cotizar.`, 'error');
+    setCheckoutButtonState(true, `Mínimo 3 embalajes (tienes ${totalEmbalajes})`);
+  } else if (hasMissingProducts) {
     setCheckoutCatalogNotice('Hay productos del carrito que ya no pudieron validarse con el catálogo actual. Vuelve al catálogo y revisa el pedido antes de cotizar.', 'error');
+    setCheckoutButtonState(true);
+  } else {
+    setCheckoutButtonState(catalogState.source === 'missing');
   }
 }
 
-const WHATSAPP_QUOTE_PHONE = '56998750387';
+const WHATSAPP_QUOTE_PHONE = '56962801676';
 const WHATSAPP_QUOTE_PHONE_2 = '56962801676';
 
 async function sendWhatsAppQuote(event) {
@@ -262,6 +306,13 @@ async function sendWhatsAppQuote(event) {
   const cart = getStoredCart();
   if (cart.length === 0) {
     setCheckoutError('Tu carrito está vacío.');
+    return;
+  }
+
+  const totalEmbalajes = cart.reduce((acc, item) => acc + (item.qty || 0), 0);
+  if (totalEmbalajes < 3) {
+    setCheckoutError(`El pedido mínimo en la tienda es de 3 embalajes de 24 unidades. Actualmente tienes ${totalEmbalajes} embalaje(s).`);
+    setCheckoutButtonState(true, `Mínimo 3 embalajes requeridos`);
     return;
   }
 
@@ -284,20 +335,21 @@ async function sendWhatsAppQuote(event) {
   const lines = cart.map(item => {
     const product = productsById.get(String(item.id));
     if (!product) return null;
-    const discount = Number(product.discount) || 0;
-    const finalPrice = discount > 0 ? Math.round(product.price * (1 - discount / 100)) : product.price;
-    const lineTotal = finalPrice * item.qty;
-    return `• ${product.name} x${item.qty}: $${lineTotal.toLocaleString('es-CL')}`;
+    const p = getProductPrices(product);
+    const lineTotal = p.discountedPackagePrice * item.qty;
+    return `• ${product.name} x${item.qty} embalaje(s) (24 unid. c/u) a $${p.discountedUnitPrice.toLocaleString('es-CL')} c/u ($${p.discountedPackagePrice.toLocaleString('es-CL')} c/emb.): $${lineTotal.toLocaleString('es-CL')}`;
   }).filter(Boolean);
 
   const message = [
     'Hola, quiero solicitar una cotización formal:',
+    '*Venta por embalaje cerrado (24 unid. c/u) - Pedido Mayorista*',
     '',
     `*Cliente:* ${name}`,
     `*Teléfono:* ${phone}`,
     email ? `*Email:* ${email}` : '',
     notes ? `*Comentarios:* ${notes}` : '',
     '',
+    `*Total embalajes:* ${totalEmbalajes}`,
     '*Detalle de los productos:*',
     ...lines,
     '',

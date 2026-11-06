@@ -401,7 +401,7 @@ A continuación le detallamos los productos destacados con precio especial de di
               </div>
               <div class="form-group">
                 <label for="email-sender-phone">WhatsApp de Ventas</label>
-                <input type="text" id="email-sender-phone" class="form-control" value="+56 9 9875 0387 / +56 9 6280 1676">
+                <input type="text" id="email-sender-phone" class="form-control" value="+56 9 6280 1676">
               </div>
             </div>
           </div>
@@ -496,7 +496,7 @@ A continuación le detallamos los productos destacados con precio especial de di
             <i class="fa-solid fa-store"></i> Ver Tienda
           </a>
           <button class="btn btn-gold" id="btn-add-product-page">
-            <i class="fa-solid fa-plus"></i> + Agregar Producto Local
+            <i class="fa-solid fa-plus"></i> + Agregar Producto
           </button>
         </div>
       </div>
@@ -693,6 +693,7 @@ A continuación le detallamos los productos destacados con precio especial de di
               <button type="button" class="tag-pill" data-wa-insert="{farmacia}"><i class="fa-solid fa-plus"></i> {farmacia}</button>
               <button type="button" class="tag-pill" data-wa-insert="{contacto}"><i class="fa-solid fa-plus"></i> {contacto}</button>
               <button type="button" class="tag-pill" data-wa-insert="{comuna}"><i class="fa-solid fa-plus"></i> {comuna}</button>
+              <button type="button" class="tag-pill" data-wa-insert="{catalogo_pdf}" style="border-color: rgba(239, 68, 68, 0.4); color: #f87171;"><i class="fa-solid fa-file-pdf"></i> {catalogo_pdf}</button>
             </div>
 
             <div class="form-group">
@@ -701,17 +702,49 @@ A continuación le detallamos los productos destacados con precio especial de di
             </div>
 
             <div class="form-group">
-              <label><i class="fa-solid fa-image"></i> Foto de Producto o Catálogo (Opcional)</label>
+              <label><i class="fa-solid fa-paperclip text-gold"></i> Archivo Adjunto: Catálogo PDF o Imagen (Opcional)</label>
               <div class="dropzone dropzone-sm" id="wa-dropzone">
-                <i class="fa-solid fa-image"></i>
-                <p>Arrastra una foto o haz clic para subir</p>
-                <input type="file" id="wa-file-input" accept="image/*" style="display: none;">
+                <i class="fa-solid fa-file-circle-plus" style="font-size: 28px; color: #f4c542; margin-bottom: 6px;"></i>
+                <p style="font-weight: 600; margin-bottom: 2px;">Arrastra un archivo PDF o imagen, o haz clic para subir</p>
+                <span style="font-size: 11px; color: #94a3b8;">Soporta Catálogo PDF, listas de precios, JPG, PNG, WEBP</span>
+                <input type="file" id="wa-file-input" accept="application/pdf,image/*" style="display: none;">
               </div>
+              
+              <!-- Vista previa de Imagen -->
               <div id="wa-image-preview-container" class="wa-image-preview-box" style="display: none;">
                 <img id="wa-image-preview-img" src="" alt="Foto WhatsApp">
                 <button type="button" class="btn btn-sm btn-danger" id="btn-remove-wa-image">
                   <i class="fa-solid fa-trash"></i> Quitar foto
                 </button>
+              </div>
+
+              <!-- Vista previa de Archivo PDF -->
+              <div id="wa-pdf-preview-container" style="display: none; margin-top: 10px; background: rgba(239, 68, 68, 0.08); border: 1.5px solid rgba(239, 68, 68, 0.35); border-radius: 12px; padding: 12px 16px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                  <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+                    <div style="width: 42px; height: 42px; background: rgba(239, 68, 68, 0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                      <i class="fa-solid fa-file-pdf text-danger" style="font-size: 24px;"></i>
+                    </div>
+                    <div style="min-width: 0;">
+                      <div id="wa-pdf-filename" style="font-weight: 700; font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">catalogo.pdf</div>
+                      <div id="wa-pdf-size" style="font-size: 11px; color: #94a3b8;">0 KB · Documento PDF</div>
+                    </div>
+                  </div>
+                  <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                    <a id="btn-wa-pdf-view" href="#" target="_blank" class="btn btn-sm btn-outline" style="font-size: 11px; padding: 5px 10px;">
+                      <i class="fa-solid fa-eye"></i> Ver PDF
+                    </a>
+                    <button type="button" class="btn btn-sm btn-danger" id="btn-remove-wa-pdf" style="font-size: 11px; padding: 5px 10px;">
+                      <i class="fa-solid fa-trash"></i> Quitar
+                    </button>
+                  </div>
+                </div>
+                <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(239,68,68,0.25); display: flex; align-items: center; gap: 8px;">
+                  <input type="checkbox" id="cb-include-pdf-link" checked style="accent-color: #f4c542; width: 16px; height: 16px; cursor: pointer;">
+                  <label for="cb-include-pdf-link" style="font-size: 11px; color: #cbd5e1; margin: 0; cursor: pointer;">
+                    Incluir automáticamente el enlace de descarga directa del PDF en el mensaje de WhatsApp
+                  </label>
+                </div>
               </div>
             </div>
           </div>
@@ -740,6 +773,21 @@ A continuación le detallamos los productos destacados con precio especial de di
                 <div class="wa-bubble">
                   <div id="wa-mock-image-container" style="display: none;" class="wa-mock-image">
                     <img id="wa-mock-img" src="" alt="Adjunto">
+                  </div>
+                  <!-- Mockup de Documento PDF en WhatsApp -->
+                  <div id="wa-mock-pdf-container" style="display: none; background: #ffffff; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <div style="width: 36px; height: 36px; background: #fee2e2; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i class="fa-solid fa-file-pdf text-danger" style="font-size: 20px;"></i>
+                      </div>
+                      <div style="flex: 1; min-width: 0;">
+                        <div id="wa-mock-pdf-name" style="font-size: 12px; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">catalogo.pdf</div>
+                        <div id="wa-mock-pdf-size" style="font-size: 10px; color: #64748b;">PDF • Documento</div>
+                      </div>
+                      <div style="color: #64748b; font-size: 13px;">
+                        <i class="fa-solid fa-arrow-down"></i>
+                      </div>
+                    </div>
                   </div>
                   <div class="wa-bubble-text" id="wa-mock-text"></div>
                   <div class="wa-bubble-time">
@@ -904,7 +952,7 @@ A continuación le detallamos los productos destacados con precio especial de di
   <div class="modal-overlay" id="product-modal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3><i class="fa-solid fa-box-open text-gold"></i> Agregar / Editar Producto</h3>
+        <h3 id="product-modal-title"><i class="fa-solid fa-box-open text-gold"></i> <span id="modal-title-text">Agregar Producto</span></h3>
         <button class="btn-close" id="btn-close-prod-modal"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="modal-body">
@@ -929,12 +977,26 @@ A continuación le detallamos los productos destacados con precio especial de di
 
           <div class="row-2col">
             <div class="form-group">
-              <label for="prod-normal-price">Precio Normal ($)</label>
-              <input type="number" id="prod-normal-price" class="form-control" placeholder="Ej: 8990">
+              <label for="prod-unit-price">Precio por Unidad (cada una) ($) <span class="req">*</span></label>
+              <input type="number" id="prod-unit-price" class="form-control" placeholder="Ej: 8150" required>
             </div>
             <div class="form-group">
-              <label for="prod-offer-price">Precio Oferta / Mayorista ($) <span class="req">*</span></label>
-              <input type="number" id="prod-offer-price" class="form-control" placeholder="Ej: 7290" required>
+              <label for="prod-offer-price">Valor por Embalaje (24 unid.) ($) <span class="req">*</span></label>
+              <input type="number" id="prod-offer-price" class="form-control" placeholder="Ej: 195600" required>
+            </div>
+          </div>
+          <div style="font-size: 11px; color: #94a3b8; margin: -6px 0 12px; display: flex; align-items: center; gap: 4px;">
+            <i class="fa-solid fa-calculator text-gold"></i> Se calcula automáticamente: 1 Embalaje = 24 unidades.
+          </div>
+
+          <div class="row-2col">
+            <div class="form-group">
+              <label for="prod-stock">Stock (embalajes) <span class="req">*</span></label>
+              <input type="number" id="prod-stock" class="form-control" placeholder="Ej: 100" value="100" min="0" required>
+            </div>
+            <div class="form-group">
+              <label for="prod-discount">Descuento (%)</label>
+              <input type="number" id="prod-discount" class="form-control" placeholder="Ej: 10" value="0" min="0" max="99">
             </div>
           </div>
 
@@ -951,7 +1013,7 @@ A continuación le detallamos los productos destacados con precio especial de di
 
           <div class="form-group">
             <label for="prod-description">Breve Descripción / Presentación</label>
-            <input type="text" id="prod-description" class="form-control" placeholder="Ej: Formato caja 24 unidades, entrega inmediata.">
+            <input type="text" id="prod-description" class="form-control" placeholder="Ej: Embalaje cerrado de 24 unidades, mínimo 3 embalajes.">
           </div>
         </form>
       </div>
@@ -1031,6 +1093,33 @@ A continuación le detallamos los productos destacados con precio especial de di
           <div class="wa-queue-message-box">
             <div class="box-title">Mensaje con Ofertas:</div>
             <div class="box-content" id="wa-q-msg-content">...</div>
+          </div>
+
+          <!-- Archivo Adjunto en Cola (PDF o Imagen) -->
+          <div id="wa-q-attachment-card" style="display: none; background: #131722; border: 1.5px solid #282f3f; border-radius: 12px; padding: 12px 16px; margin: 12px 0;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+                <div id="wa-q-attach-badge" style="width: 38px; height: 38px; background: rgba(239, 68, 68, 0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                  <i id="wa-q-attach-icon" class="fa-solid fa-file-pdf text-danger" style="font-size: 22px;"></i>
+                </div>
+                <div style="min-width: 0;">
+                  <div id="wa-q-attach-name" style="font-size: 13px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">catalogo.pdf</div>
+                  <div id="wa-q-attach-meta" style="font-size: 11px; color: #94a3b8;">Documento PDF adjunto para WhatsApp</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <a id="btn-wa-q-download-file" href="#" download target="_blank" class="btn btn-sm btn-gold" style="font-size: 11px; font-weight: 700;">
+                  <i class="fa-solid fa-download"></i> Descargar PDF
+                </a>
+                <button type="button" id="btn-wa-q-copy-link" class="btn btn-sm btn-outline" style="font-size: 11px;">
+                  <i class="fa-solid fa-link"></i> Copiar Link
+                </button>
+              </div>
+            </div>
+            <div style="margin-top: 10px; background: rgba(244, 197, 66, 0.1); border-left: 3px solid #f4c542; padding: 8px 12px; border-radius: 4px; font-size: 11px; color: #e2e8f0; line-height: 1.4;">
+              <i class="fa-solid fa-circle-info text-gold"></i> <strong>Cómo enviar el PDF en WhatsApp Web:</strong>
+              Al hacer clic en <em>"Abrir Chat en WhatsApp Web"</em> el mensaje ya lleva el enlace de descarga. Si prefieres enviarlo como archivo adjunto nativo, simplemente arrastra el PDF descargado hacia la conversación de WhatsApp Web.
+            </div>
           </div>
 
           <div class="wa-queue-actions">

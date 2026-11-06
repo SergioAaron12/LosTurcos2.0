@@ -21,6 +21,7 @@ const state = {
   comunas: [],
   stats: {},
   uploadedEmailFiles: [],
+  waFile: null,
   waImageFile: null,
   smtpConfig: {},
   currentCampaignPollInterval: null,
@@ -194,11 +195,20 @@ const DOM = {
   waImagePreviewContainer: document.getElementById('wa-image-preview-container'),
   waImagePreviewImg: document.getElementById('wa-image-preview-img'),
   btnRemoveWaImage: document.getElementById('btn-remove-wa-image'),
+  waPdfPreviewContainer: document.getElementById('wa-pdf-preview-container'),
+  waPdfFilename: document.getElementById('wa-pdf-filename'),
+  waPdfSize: document.getElementById('wa-pdf-size'),
+  btnWaPdfView: document.getElementById('btn-wa-pdf-view'),
+  btnRemoveWaPdf: document.getElementById('btn-remove-wa-pdf'),
+  cbIncludePdfLink: document.getElementById('cb-include-pdf-link'),
   waPreviewContactSelect: document.getElementById('wa-preview-contact-select'),
   waMockName: document.getElementById('wa-mock-name'),
   waMockPhone: document.getElementById('wa-mock-phone'),
   waMockImageContainer: document.getElementById('wa-mock-image-container'),
   waMockImg: document.getElementById('wa-mock-img'),
+  waMockPdfContainer: document.getElementById('wa-mock-pdf-container'),
+  waMockPdfName: document.getElementById('wa-mock-pdf-name'),
+  waMockPdfSize: document.getElementById('wa-mock-pdf-size'),
   waMockText: document.getElementById('wa-mock-text'),
   waMockTime: document.getElementById('wa-mock-time'),
   btnStartWaDispatcher: document.getElementById('btn-start-wa-dispatcher'),
@@ -215,6 +225,13 @@ const DOM = {
   waQContacto: document.getElementById('wa-q-contacto'),
   waQPhone: document.getElementById('wa-q-phone'),
   waQMsgContent: document.getElementById('wa-q-msg-content'),
+  waQAttachmentCard: document.getElementById('wa-q-attachment-card'),
+  waQAttachBadge: document.getElementById('wa-q-attach-badge'),
+  waQAttachIcon: document.getElementById('wa-q-attach-icon'),
+  waQAttachName: document.getElementById('wa-q-attach-name'),
+  waQAttachMeta: document.getElementById('wa-q-attach-meta'),
+  btnWaQDownloadFile: document.getElementById('btn-wa-q-download-file'),
+  btnWaQCopyLink: document.getElementById('btn-wa-q-copy-link'),
   btnWaOpenChat: document.getElementById('btn-wa-open-chat'),
   btnWaCopyMsg: document.getElementById('btn-wa-copy-msg'),
   btnWaNext: document.getElementById('btn-wa-next'),
@@ -280,24 +297,49 @@ function initFirebaseClient() {
 
       const fbProducts = [];
       snapshot.forEach(doc => {
-        const data = doc.data();
-        const price = Number(data.price) || 0;
+        const data = doc.data() || {};
+        const UNITS_PER_PACKAGE = 24;
+        const rawPrice = Number(data.price) || 0;
         const discount = Number(data.discount) || 0;
-        const offerPrice = (discount > 0 && discount < price) ? (price - discount) : price;
+
+        let unitPrice = 0;
+        let packagePrice = 0;
+
+        if (data.unitPrice && data.packagePrice) {
+          unitPrice = Number(data.unitPrice);
+          packagePrice = Number(data.packagePrice);
+        } else if (rawPrice >= 50000) {
+          packagePrice = rawPrice;
+          unitPrice = Math.round(rawPrice / UNITS_PER_PACKAGE);
+        } else {
+          unitPrice = rawPrice;
+          packagePrice = Math.round(rawPrice * UNITS_PER_PACKAGE);
+        }
+
+        const discountedUnitPrice = discount > 0 ? Math.round(unitPrice * (1 - discount / 100)) : unitPrice;
+        const discountedPackagePrice = discount > 0 ? Math.round(packagePrice * (1 - discount / 100)) : packagePrice;
 
         fbProducts.push({
           id: `fb_${doc.id}`,
           firestoreId: doc.id,
           name: data.name || 'Producto',
-          category: data.category || 'Cuidado Bucal',
+          category: data.category || 'General',
           subcategory: data.subcategory || '',
-          normalPrice: price,
-          offerPrice: offerPrice,
+          price: rawPrice,
+          unitPrice,
+          packagePrice,
+          discountedUnitPrice,
+          discountedPackagePrice,
+          normalPrice: packagePrice,
+          offerPrice: discountedPackagePrice,
+          discount: discount,
           image: data.img || data.image || '/asset/logo-icon.png',
-          url: 'https://distribuidoralarutadeloriente.cl/html/cuidado-bucal.html',
-          stock: data.stock || '100',
+          url: data.url || 'https://distribuidoralarutadeloriente.cl',
+          stock: data.stock !== undefined ? data.stock : 100,
+          details: data.details || data.description || '',
+          raw: data,
           isFromFirebase: true,
-          inStock: true,
+          inStock: Number(data.stock) > 0,
           featured: true
         });
       });
@@ -442,8 +484,11 @@ function renderProductsPicker() {
 function renderFullCatalog() {
   if (!DOM.catalogFullGrid) return;
   DOM.catalogFullGrid.innerHTML = state.products.map(p => {
-    const priceText = formatMoney(p.offerPrice || p.normalPrice);
-    const stockVal = p.stock || '100';
+    const unitPriceText = formatMoney(p.discountedUnitPrice || p.unitPrice);
+    const packagePriceText = formatMoney(p.discountedPackagePrice || p.packagePrice);
+    const stockVal = p.stock !== undefined ? p.stock : '100';
+    const rawDiscount = p.raw?.discount || p.discount || 0;
+    const hasDiscount = rawDiscount > 0;
 
     return `
       <div class="prod-picker-card" style="cursor: default;">
@@ -452,11 +497,27 @@ function renderFullCatalog() {
         </div>
         <div class="prod-card-info">
           <div class="prod-card-name">${escapeHtml(p.name)}</div>
-          <div class="prod-card-price-tag">${priceText}</div>
-          <div class="prod-card-stock"><span class="dot"></span> Stock: ${stockVal}</div>
-          <div class="prod-card-actions">
-            <a href="${p.url || 'https://distribuidoralarutadeloriente.cl'}" target="_blank" class="btn-detail-dark" style="grid-column: 1 / -1;">
-              Ver en distribuidoralarutadeloriente.cl &raquo;
+          <div class="prod-card-price-tag" style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="font-size: 18px; font-weight: 800; color: #f4c542;">
+              ${unitPriceText} <span style="font-size: 11px; font-weight: normal; color: #cbd5e1;">c/u</span>
+            </div>
+            <div style="font-size: 11px; color: #94a3b8; font-weight: 600;">
+              <i class="fa-solid fa-box-open" style="color: #f4c542;"></i> Embalaje (24u): <strong style="color: #fff;">${packagePriceText}</strong>
+            </div>
+          </div>
+          ${hasDiscount ? `<div style="font-size: 11px; color: #4ade80; margin-top: 2px;">⚡ ${rawDiscount}% desc.</div>` : ''}
+          <div class="prod-card-stock" style="margin-top: 4px;"><span class="dot"></span> Stock: ${stockVal} embalajes</div>
+          <div class="prod-card-actions" style="display: flex; gap: 8px; margin-top: 10px;">
+            <button type="button" class="btn btn-sm btn-gold" onclick="openEditProductModal('${p.firestoreId || p.id}')" style="flex: 1; padding: 6px 10px; font-size: 12px; font-weight: 700; cursor: pointer;">
+              <i class="fa-solid fa-pen-to-square"></i> Editar
+            </button>
+            <button type="button" class="btn btn-sm btn-outline" onclick="deleteProductFromAdmin('${p.firestoreId || p.id}', '${escapeHtml(p.name)}')" style="color: #ef4444; border-color: rgba(239,68,68,0.4); padding: 6px 10px; font-size: 12px; cursor: pointer;" title="Eliminar producto">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+          <div style="margin-top: 8px; text-align: center;">
+            <a href="${p.url || 'https://distribuidoralarutadeloriente.cl'}" target="_blank" class="btn-detail-dark" style="display: block; font-size: 11px; padding: 4px 8px;">
+              Ver en tienda web &raquo;
             </a>
           </div>
         </div>
@@ -464,6 +525,227 @@ function renderFullCatalog() {
     `;
   }).join('');
 }
+
+// ================= GESTOR DE PRODUCTOS (FIREBASE FIRESTORE) =================
+function openCreateProductModal() {
+  const modal = DOM.productModal || document.getElementById('product-modal');
+  const title = document.getElementById('modal-title-text');
+  if (title) title.textContent = 'Agregar Producto a Firebase';
+
+  document.getElementById('prod-id').value = '';
+  document.getElementById('prod-name').value = '';
+  document.getElementById('prod-category').value = 'General';
+  document.getElementById('prod-url').value = 'https://distribuidoralarutadeloriente.cl';
+  const unitPriceEl = document.getElementById('prod-unit-price');
+  if (unitPriceEl) unitPriceEl.value = '';
+  document.getElementById('prod-offer-price').value = '';
+  document.getElementById('prod-discount').value = '0';
+  document.getElementById('prod-stock').value = '100';
+  document.getElementById('prod-image-url').value = '';
+  document.getElementById('prod-description').value = '';
+
+  const previewDiv = document.getElementById('prod-image-preview');
+  if (previewDiv) previewDiv.style.display = 'none';
+  const previewImg = document.getElementById('prod-preview-img');
+  if (previewImg) previewImg.src = '';
+  const fileInput = document.getElementById('prod-file-input');
+  if (fileInput) fileInput.value = '';
+
+  if (modal) modal.classList.add('active');
+}
+
+function openEditProductModal(productId) {
+  const modal = DOM.productModal || document.getElementById('product-modal');
+  const title = document.getElementById('modal-title-text');
+
+  const cleanId = String(productId).replace(/^fb_/, '');
+  const p = state.products.find(item => item.firestoreId === cleanId || item.id === productId || item.id === cleanId);
+  if (!p) {
+    showToast('No se encontró el producto a editar.', 'error');
+    return;
+  }
+
+  if (title) title.textContent = `Editar Producto: ${p.name}`;
+
+  document.getElementById('prod-id').value = p.firestoreId || cleanId;
+  document.getElementById('prod-name').value = p.name || '';
+  document.getElementById('prod-category').value = p.category || 'General';
+  document.getElementById('prod-url').value = p.url || 'https://distribuidoralarutadeloriente.cl';
+  
+  const unitPriceEl = document.getElementById('prod-unit-price');
+  if (unitPriceEl) unitPriceEl.value = p.unitPrice || (p.packagePrice ? Math.round(p.packagePrice / 24) : '');
+  document.getElementById('prod-offer-price').value = p.packagePrice || p.price || '';
+  
+  document.getElementById('prod-discount').value = p.discount || (p.raw && p.raw.discount) || 0;
+  document.getElementById('prod-stock').value = p.stock !== undefined ? p.stock : 100;
+  document.getElementById('prod-image-url').value = p.image || '';
+  document.getElementById('prod-description').value = p.details || (p.raw && p.raw.details) || '';
+
+  const previewDiv = document.getElementById('prod-image-preview');
+  const previewImg = document.getElementById('prod-preview-img');
+  if (p.image) {
+    if (previewImg) previewImg.src = p.image;
+    if (previewDiv) previewDiv.style.display = 'block';
+  } else {
+    if (previewDiv) previewDiv.style.display = 'none';
+  }
+  const fileInput = document.getElementById('prod-file-input');
+  if (fileInput) fileInput.value = '';
+
+  if (modal) modal.classList.add('active');
+}
+
+function closeProductModal() {
+  const modal = DOM.productModal || document.getElementById('product-modal');
+  if (modal) modal.classList.remove('active');
+}
+
+async function saveProductFromModal() {
+  const name = document.getElementById('prod-name').value.trim();
+  const unitPriceInput = document.getElementById('prod-unit-price');
+  const packagePriceInput = document.getElementById('prod-offer-price');
+  const unitPriceVal = unitPriceInput ? unitPriceInput.value.trim() : '';
+  const packagePriceVal = packagePriceInput ? packagePriceInput.value.trim() : '';
+
+  let unitPrice = parseInt(unitPriceVal, 10);
+  let packagePrice = parseInt(packagePriceVal, 10);
+
+  if (isNaN(unitPrice) && !isNaN(packagePrice)) {
+    unitPrice = Math.round(packagePrice / 24);
+  } else if (!isNaN(unitPrice) && isNaN(packagePrice)) {
+    packagePrice = unitPrice * 24;
+  } else if (isNaN(unitPrice) && isNaN(packagePrice)) {
+    showToast('Ingresa el precio del producto.', 'error');
+    return;
+  }
+
+  const stockVal = document.getElementById('prod-stock').value.trim();
+  const discountVal = document.getElementById('prod-discount').value.trim();
+  const category = document.getElementById('prod-category').value.trim() || 'General';
+  const url = document.getElementById('prod-url').value.trim() || 'https://distribuidoralarutadeloriente.cl';
+  const details = document.getElementById('prod-description').value.trim();
+  const prodId = document.getElementById('prod-id').value.trim();
+  let imgUrl = document.getElementById('prod-image-url').value.trim();
+  const previewImg = document.getElementById('prod-preview-img');
+
+  if (previewImg && previewImg.src && previewImg.src.startsWith('data:')) {
+    imgUrl = previewImg.src;
+  }
+
+  if (!name) {
+    showToast('Ingresa el nombre del producto.', 'error');
+    return;
+  }
+
+  const stock = stockVal ? parseInt(stockVal, 10) : 100;
+  const discount = discountVal ? parseInt(discountVal, 10) : 0;
+
+  if (!firebase.apps.length) {
+    firebase.initializeApp(FIREBASE_CONFIG);
+  }
+
+  const user = firebase.auth().currentUser;
+  if (!user || !isAuthorizedAdminUser(user)) {
+    showToast('Debes iniciar sesión con tu cuenta de administrador autorizada para guardar cambios en Firebase.', 'error');
+    return;
+  }
+
+  const db = firebase.firestore();
+  const saveBtn = DOM.btnSaveProd || document.getElementById('btn-save-prod');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+  }
+
+  try {
+    const timestamp = Date.now();
+    let targetDocId = prodId;
+
+    if (targetDocId) {
+      const existingDoc = await db.collection('products').doc(targetDocId).get();
+      const existingData = existingDoc.exists ? existingDoc.data() : {};
+
+      const productPayload = {
+        ...existingData,
+        name,
+        price: packagePrice,
+        unitPrice,
+        packagePrice,
+        normalPrice: packagePrice,
+        discount,
+        stock,
+        category,
+        url,
+        img: imgUrl || existingData.img || '',
+        details,
+        updatedAt: timestamp
+      };
+
+      await db.collection('products').doc(targetDocId).set(productPayload, { merge: true });
+      showToast('¡Producto actualizado con éxito en Firebase y en la web!', 'success');
+    } else {
+      const newNumericId = Date.now();
+      targetDocId = String(newNumericId);
+
+      const productPayload = {
+        id: newNumericId,
+        name,
+        price: packagePrice,
+        unitPrice,
+        packagePrice,
+        normalPrice: packagePrice,
+        discount,
+        stock,
+        category,
+        url,
+        img: imgUrl || '',
+        details,
+        showcase: 'index',
+        showInOffers: discount > 0,
+        showInNew: true,
+        updatedAt: timestamp
+      };
+
+      await db.collection('products').doc(targetDocId).set(productPayload);
+      showToast('¡Nuevo producto agregado a Firebase y a la tienda web!', 'success');
+    }
+
+    closeProductModal();
+  } catch (err) {
+    console.error('Error al guardar producto en Firebase:', err);
+    showToast('No se pudo guardar en Firebase: ' + (err.message || 'Error de conexión o permisos'), 'error');
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar Producto';
+    }
+  }
+}
+
+async function deleteProductFromAdmin(productId, name) {
+  const cleanId = String(productId).replace(/^fb_/, '');
+  if (!confirm(`¿Estás seguro de que deseas eliminar permanentemente el producto "${name}" de Firebase y la tienda web?`)) {
+    return;
+  }
+
+  const user = firebase.auth().currentUser;
+  if (!user || !isAuthorizedAdminUser(user)) {
+    showToast('Debes iniciar sesión con tu cuenta de administrador autorizada para eliminar productos de Firebase.', 'error');
+    return;
+  }
+
+  try {
+    const db = firebase.firestore();
+    await db.collection('products').doc(cleanId).delete();
+    showToast(`Producto "${name}" eliminado de Firebase y de la web.`, 'success');
+  } catch (err) {
+    console.error('Error al eliminar producto en Firebase:', err);
+    showToast('Error al eliminar: ' + (err.message || 'Error de permisos'), 'error');
+  }
+}
+
+window.openEditProductModal = openEditProductModal;
+window.deleteProductFromAdmin = deleteProductFromAdmin;
 
 // ================= CONTACTS DATA =================
 async function loadContacts() {
@@ -660,7 +942,7 @@ function getEmailPreviewPayload() {
   const ctaText = DOM.emailCtaText.value || 'Visitar Catálogo Completo en la Web';
   const ctaUrl = DOM.emailCtaUrl.value || 'https://distribuidoralarutadeloriente.cl';
   const senderName = DOM.emailSenderName.value || 'Distribuidora La Ruta del Oriente';
-  const senderPhone = DOM.emailSenderPhone.value || '+56 9 9875 0387 / +56 9 6280 1676';
+  const senderPhone = DOM.emailSenderPhone.value || '+56 9 6280 1676';
 
   let bannerUrl = null;
   if (DOM.cbUseAsBanner && DOM.cbUseAsBanner.checked && state.uploadedEmailFiles.length > 0) {
@@ -797,7 +1079,7 @@ function buildEmailHtmlPreview(data) {
           <!-- Contacto / Firma -->
           <div style="margin-top: 26px; padding-top: 18px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.5;">
             <strong style="color: #0b0c10;">${data.senderName || 'Distribuidora La Ruta del Oriente'}</strong><br/>
-            WhatsApp de Ventas: <strong style="color: #059669;">${data.senderPhone || '+56 9 9875 0387 / +56 9 6280 1676'}</strong><br/>
+            WhatsApp de Ventas: <strong style="color: #059669;">${data.senderPhone || '+56 9 6280 1676'}</strong><br/>
             Santiago de Chile &middot; <a href="https://distribuidoralarutadeloriente.cl" target="_blank" style="color: #f4c542; text-decoration: underline;">distribuidoralarutadeloriente.cl</a>
           </div>
         </div>
@@ -1034,8 +1316,33 @@ ${prodLines}
 ¿Deseas que te reservemos unidades o te emitamos factura? 💊📦`;
 }
 
+function renderWaAttachedFile() {
+  if (!state.waFile) {
+    if (DOM.waImagePreviewContainer) DOM.waImagePreviewContainer.style.display = 'none';
+    if (DOM.waPdfPreviewContainer) DOM.waPdfPreviewContainer.style.display = 'none';
+    if (DOM.waFileInput) DOM.waFileInput.value = '';
+    return;
+  }
+
+  if (state.waFile.isPdf) {
+    if (DOM.waImagePreviewContainer) DOM.waImagePreviewContainer.style.display = 'none';
+    if (DOM.waPdfPreviewContainer) {
+      DOM.waPdfPreviewContainer.style.display = 'block';
+      if (DOM.waPdfFilename) DOM.waPdfFilename.textContent = state.waFile.originalName;
+      if (DOM.waPdfSize) DOM.waPdfSize.textContent = `${Math.round(state.waFile.size / 1024)} KB · Documento PDF`;
+      if (DOM.btnWaPdfView) DOM.btnWaPdfView.href = state.waFile.url;
+    }
+  } else if (state.waFile.isImage) {
+    if (DOM.waPdfPreviewContainer) DOM.waPdfPreviewContainer.style.display = 'none';
+    if (DOM.waImagePreviewContainer) {
+      DOM.waImagePreviewContainer.style.display = 'flex';
+      if (DOM.waImagePreviewImg) DOM.waImagePreviewImg.src = state.waFile.url;
+    }
+  }
+}
+
 function updateLiveWaPreview() {
-  const contactId = DOM.waPreviewContactSelect.value;
+  const contactId = DOM.waPreviewContactSelect ? DOM.waPreviewContactSelect.value : '';
   const contact = state.contacts.find(c => c.id === contactId) || state.contacts[0] || {
     nombreFarmacia: 'FARMACIA RENACER',
     contacto: 'CLAUDIA SEGOVIA',
@@ -1043,30 +1350,59 @@ function updateLiveWaPreview() {
     comuna: 'SANTIAGO'
   };
 
-  DOM.waMockName.textContent = `${contact.contacto || 'Cliente'} (${contact.nombreFarmacia || 'Farmacia'})`;
-  DOM.waMockPhone.textContent = contact.telefonoDisplay || '+56 9 xxxx xxxx';
+  if (DOM.waMockName) DOM.waMockName.textContent = `${contact.contacto || 'Cliente'} (${contact.nombreFarmacia || 'Farmacia'})`;
+  if (DOM.waMockPhone) DOM.waMockPhone.textContent = contact.telefonoDisplay || '+56 9 xxxx xxxx';
 
-  let rawText = DOM.waMessageText.value || '';
+  let rawText = DOM.waMessageText ? (DOM.waMessageText.value || '') : '';
   let replaced = rawText
     .replace(/{farmacia}/gi, contact.nombreFarmacia || 'su farmacia')
     .replace(/{contacto}/gi, contact.contacto || 'estimado/a')
     .replace(/{comuna}/gi, contact.comuna || '');
+
+  const hasPdfTag = rawText.includes('{catalogo_pdf}') || rawText.includes('{pdf}');
+  const includePdfLink = DOM.cbIncludePdfLink && DOM.cbIncludePdfLink.checked;
+
+  if (state.waFile) {
+    const fileUrl = state.waFile.url;
+    if (hasPdfTag) {
+      replaced = replaced
+        .replace(/{catalogo_pdf}/gi, fileUrl)
+        .replace(/{pdf}/gi, fileUrl);
+    } else if (includePdfLink && !replaced.includes(fileUrl)) {
+      replaced += `\n\n📄 *Descargar Catálogo PDF:* ${fileUrl}`;
+    }
+  } else {
+    replaced = replaced
+      .replace(/{catalogo_pdf}/gi, '')
+      .replace(/{pdf}/gi, '');
+  }
 
   let formattedHtml = escapeHtml(replaced)
     .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
     .replace(/_(.*?)_/g, '<em>$1</em>')
     .replace(/\n/g, '<br/>');
 
-  DOM.waMockText.innerHTML = formattedHtml;
+  if (DOM.waMockText) DOM.waMockText.innerHTML = formattedHtml;
 
   const now = new Date();
-  DOM.waMockTime.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  if (DOM.waMockTime) DOM.waMockTime.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-  if (state.waImageFile) {
-    DOM.waMockImageContainer.style.display = 'block';
-    DOM.waMockImg.src = state.waImageFile.url;
+  if (state.waFile && state.waFile.isPdf) {
+    if (DOM.waMockPdfContainer) {
+      DOM.waMockPdfContainer.style.display = 'block';
+      if (DOM.waMockPdfName) DOM.waMockPdfName.textContent = state.waFile.originalName;
+      if (DOM.waMockPdfSize) DOM.waMockPdfSize.textContent = `${Math.round(state.waFile.size / 1024)} KB • PDF`;
+    }
+    if (DOM.waMockImageContainer) DOM.waMockImageContainer.style.display = 'none';
+  } else if (state.waFile && state.waFile.isImage) {
+    if (DOM.waMockPdfContainer) DOM.waMockPdfContainer.style.display = 'none';
+    if (DOM.waMockImageContainer) {
+      DOM.waMockImageContainer.style.display = 'block';
+      if (DOM.waMockImg) DOM.waMockImg.src = state.waFile.url;
+    }
   } else {
-    DOM.waMockImageContainer.style.display = 'none';
+    if (DOM.waMockPdfContainer) DOM.waMockPdfContainer.style.display = 'none';
+    if (DOM.waMockImageContainer) DOM.waMockImageContainer.style.display = 'none';
   }
 }
 
@@ -1074,6 +1410,46 @@ function updateLiveWaPreview() {
 async function handleFileUpload(files, type = 'email') {
   if (!files || files.length === 0) return;
 
+  if (type === 'wa') {
+    const file = files[0];
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isImage = file.type.startsWith('image/');
+    let uploadedFile = null;
+
+    showToast('Procesando archivo para WhatsApp...', 'info');
+
+    try {
+      const formData = new FormData();
+      formData.append('files', file);
+      const data = await apiFetch('/api/upload', { method: 'POST', body: formData });
+      if (data && data.success && data.files && data.files.length > 0) {
+        uploadedFile = data.files[0];
+      }
+    } catch (uploadErr) {
+      console.warn('Servidor local no disponible para upload, usando archivo en navegador:', uploadErr);
+    }
+
+    const fileBlobUrl = URL.createObjectURL(file);
+    const finalUrl = uploadedFile ? getApiUrl(uploadedFile.url) : fileBlobUrl;
+
+    state.waFile = {
+      originalName: file.name,
+      size: file.size,
+      mimetype: file.type || (isPdf ? 'application/pdf' : 'image/jpeg'),
+      isPdf,
+      isImage,
+      url: finalUrl,
+      blobUrl: fileBlobUrl
+    };
+    state.waImageFile = isImage ? state.waFile : null;
+
+    renderWaAttachedFile();
+    updateLiveWaPreview();
+    showToast(isPdf ? '¡Catálogo PDF listo para WhatsApp!' : '¡Imagen lista para WhatsApp!', 'success');
+    return;
+  }
+
+  // Email files upload
   const formData = new FormData();
   for (let i = 0; i < files.length; i++) {
     formData.append('files', files[i]);
@@ -1084,21 +1460,10 @@ async function handleFileUpload(files, type = 'email') {
     const data = await apiFetch('/api/upload', { method: 'POST', body: formData });
     if (!data.success) throw new Error(data.error);
 
-    if (type === 'email') {
-      state.uploadedEmailFiles.push(...data.files);
-      renderUploadedEmailFiles();
-      showToast(`${data.files.length} archivo(s) agregado(s)`, 'success');
-      updateLiveEmailPreview();
-    } else if (type === 'wa') {
-      const img = data.files.find(f => f.isImage);
-      if (img) {
-        state.waImageFile = img;
-        DOM.waImagePreviewContainer.style.display = 'flex';
-        DOM.waImagePreviewImg.src = img.url;
-        showToast('Foto lista para WhatsApp', 'success');
-        updateLiveWaPreview();
-      }
-    }
+    state.uploadedEmailFiles.push(...data.files);
+    renderUploadedEmailFiles();
+    showToast(`${data.files.length} archivo(s) agregado(s)`, 'success');
+    updateLiveEmailPreview();
   } catch (err) {
     showToast(`Error al subir: ${err.message}`, 'error');
   }
@@ -1280,11 +1645,54 @@ function renderCurrentWaQueueItem() {
   DOM.waQContacto.textContent = `Contacto: ${item.contacto || 'Encargado'}`;
   DOM.waQPhone.textContent = item.telefonoDisplay || item.whatsAppNumero;
 
-  const rawMsg = DOM.waMessageText.value;
-  const personalizedMsg = rawMsg
+  const rawMsg = DOM.waMessageText ? (DOM.waMessageText.value || '') : '';
+  let personalizedMsg = rawMsg
     .replace(/{farmacia}/gi, item.nombreFarmacia || 'su farmacia')
     .replace(/{contacto}/gi, item.contacto || 'estimado/a')
     .replace(/{comuna}/gi, item.comuna || '');
+
+  const hasPdfTag = rawMsg.includes('{catalogo_pdf}') || rawMsg.includes('{pdf}');
+  const includePdfLink = DOM.cbIncludePdfLink && DOM.cbIncludePdfLink.checked;
+
+  if (state.waFile) {
+    const fileUrl = state.waFile.url;
+    if (hasPdfTag) {
+      personalizedMsg = personalizedMsg
+        .replace(/{catalogo_pdf}/gi, fileUrl)
+        .replace(/{pdf}/gi, fileUrl);
+    } else if (includePdfLink && !personalizedMsg.includes(fileUrl)) {
+      personalizedMsg += `\n\n📄 *Descargar Catálogo PDF:* ${fileUrl}`;
+    }
+
+    if (DOM.waQAttachmentCard) {
+      DOM.waQAttachmentCard.style.display = 'block';
+      if (DOM.waQAttachName) DOM.waQAttachName.textContent = state.waFile.originalName;
+      if (DOM.waQAttachMeta) {
+        DOM.waQAttachMeta.textContent = state.waFile.isPdf 
+          ? `${Math.round(state.waFile.size / 1024)} KB · Documento PDF para WhatsApp` 
+          : `${Math.round(state.waFile.size / 1024)} KB · Imagen para WhatsApp`;
+      }
+      if (DOM.waQAttachIcon) {
+        DOM.waQAttachIcon.className = state.waFile.isPdf ? 'fa-solid fa-file-pdf text-danger' : 'fa-solid fa-image text-gold';
+      }
+      if (DOM.btnWaQDownloadFile) {
+        DOM.btnWaQDownloadFile.href = state.waFile.url;
+        DOM.btnWaQDownloadFile.setAttribute('download', state.waFile.originalName);
+      }
+      if (DOM.btnWaQCopyLink) {
+        DOM.btnWaQCopyLink.onclick = () => {
+          navigator.clipboard.writeText(state.waFile.url).then(() => {
+            showToast('Enlace copiado al portapapeles', 'success');
+          });
+        };
+      }
+    }
+  } else {
+    if (DOM.waQAttachmentCard) DOM.waQAttachmentCard.style.display = 'none';
+    personalizedMsg = personalizedMsg
+      .replace(/{catalogo_pdf}/gi, '')
+      .replace(/{pdf}/gi, '');
+  }
 
   DOM.waQMsgContent.textContent = personalizedMsg;
 
@@ -1626,12 +2034,49 @@ function setupEventListeners() {
   DOM.waDropzone.addEventListener('click', () => DOM.waFileInput.click());
   DOM.waFileInput.addEventListener('change', (e) => handleFileUpload(e.target.files, 'wa'));
 
+  // Drag & drop en dropzone de WhatsApp (PDF o imágenes)
+  if (DOM.waDropzone) {
+    DOM.waDropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      DOM.waDropzone.style.borderColor = '#f4c542';
+      DOM.waDropzone.style.background = 'rgba(244, 197, 66, 0.08)';
+    });
+    DOM.waDropzone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      DOM.waDropzone.style.borderColor = '';
+      DOM.waDropzone.style.background = '';
+    });
+    DOM.waDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      DOM.waDropzone.style.borderColor = '';
+      DOM.waDropzone.style.background = '';
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleFileUpload(e.dataTransfer.files, 'wa');
+      }
+    });
+  }
+
   DOM.btnRemoveWaImage.addEventListener('click', () => {
+    state.waFile = null;
     state.waImageFile = null;
-    DOM.waImagePreviewContainer.style.display = 'none';
-    DOM.waFileInput.value = '';
+    renderWaAttachedFile();
     updateLiveWaPreview();
+    showToast('Foto removida', 'info');
   });
+
+  if (DOM.btnRemoveWaPdf) {
+    DOM.btnRemoveWaPdf.addEventListener('click', () => {
+      state.waFile = null;
+      state.waImageFile = null;
+      renderWaAttachedFile();
+      updateLiveWaPreview();
+      showToast('Catálogo PDF removido', 'info');
+    });
+  }
+
+  if (DOM.cbIncludePdfLink) {
+    DOM.cbIncludePdfLink.addEventListener('change', updateLiveWaPreview);
+  }
 
   DOM.btnStartWaDispatcher.addEventListener('click', startWhatsAppDispatcher);
   DOM.btnCloseWaModal.addEventListener('click', () => DOM.waQueueModal.classList.remove('active'));
@@ -1662,6 +2107,63 @@ function setupEventListeners() {
   });
 
   DOM.btnRefreshHistory.addEventListener('click', loadHistory);
+
+  // Products CRUD Event Listeners
+  const btnAddPage = document.getElementById('btn-add-product-page');
+  if (btnAddPage) btnAddPage.addEventListener('click', openCreateProductModal);
+
+  if (DOM.btnCloseProdModal) DOM.btnCloseProdModal.addEventListener('click', closeProductModal);
+  if (DOM.btnCancelProd) DOM.btnCancelProd.addEventListener('click', closeProductModal);
+  if (DOM.btnSaveProd) DOM.btnSaveProd.addEventListener('click', saveProductFromModal);
+
+  const prodFileInput = document.getElementById('prod-file-input');
+  if (prodFileInput) {
+    prodFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (loadEvent) => {
+        const previewDiv = document.getElementById('prod-image-preview');
+        const previewImg = document.getElementById('prod-preview-img');
+        if (previewImg) previewImg.src = loadEvent.target.result;
+        if (previewDiv) previewDiv.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  const prodImageUrlInput = document.getElementById('prod-image-url');
+  if (prodImageUrlInput) {
+    prodImageUrlInput.addEventListener('input', (e) => {
+      const url = e.target.value.trim();
+      const previewDiv = document.getElementById('prod-image-preview');
+      const previewImg = document.getElementById('prod-preview-img');
+      if (url) {
+        if (previewImg) previewImg.src = url;
+        if (previewDiv) previewDiv.style.display = 'block';
+      } else {
+        if (previewDiv) previewDiv.style.display = 'none';
+      }
+    });
+  }
+
+  // Bidirectional auto-calculation between Unit Price and Package Price (24 units)
+  const unitPriceEl = document.getElementById('prod-unit-price');
+  const packagePriceEl = document.getElementById('prod-offer-price');
+  if (unitPriceEl && packagePriceEl) {
+    unitPriceEl.addEventListener('input', () => {
+      const uVal = parseFloat(unitPriceEl.value.replace(/[^0-9.]/g, ''));
+      if (!isNaN(uVal) && uVal > 0) {
+        packagePriceEl.value = Math.round(uVal * 24);
+      }
+    });
+    packagePriceEl.addEventListener('input', () => {
+      const pVal = parseFloat(packagePriceEl.value.replace(/[^0-9.]/g, ''));
+      if (!isNaN(pVal) && pVal > 0) {
+        unitPriceEl.value = Math.round(pVal / 24);
+      }
+    });
+  }
 }
 
 function insertTextAtCursor(textarea, text) {
